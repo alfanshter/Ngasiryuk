@@ -298,7 +298,7 @@ fun MenuCard(
             Text(
                 text = menuItem.title,
                 fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.SemiBold,
                 color = Color.Black,
                 maxLines = 3,
                 textAlign = TextAlign.Center,
