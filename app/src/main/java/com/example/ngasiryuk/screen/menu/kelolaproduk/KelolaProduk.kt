@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
@@ -27,11 +29,19 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,14 +53,20 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.galonqu.commond.plusjakarta
 import com.example.ngasiryuk.R
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KelolaProduk() {
+    var selectedTab by remember { mutableStateOf(0) }
+    var showBottomSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     Scaffold(
         topBar = {
             // Custom Top Bar dengan Rounded Bottom
@@ -63,7 +79,7 @@ fun KelolaProduk() {
                     .padding(horizontal = 16.dp)
             ) {
                 Column(
-                    modifier = Modifier.fillMaxSize().padding(top = 30.dp)
+                    modifier = Modifier.fillMaxSize().padding(top = 35.dp)
                 ) {
                     Row(
                         modifier = Modifier
@@ -118,7 +134,7 @@ fun KelolaProduk() {
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(36.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     // Tab Row (Stok & Riwayat)
                     Row(
@@ -127,8 +143,6 @@ fun KelolaProduk() {
                             .padding(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        var selectedTab by remember { mutableStateOf(0) }
-
                         // Tab Stok
                         Button(
                             onClick = { selectedTab = 0 },
@@ -174,7 +188,7 @@ fun KelolaProduk() {
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { /* Handle add product */ },
+                onClick = { showBottomSheet = true },
                 containerColor = Color(0xFFFDB913),
                 contentColor = Color.Black,
                 modifier = Modifier.size(56.dp)
@@ -188,18 +202,454 @@ fun KelolaProduk() {
         },
         contentWindowInsets = WindowInsets(0)
     ) { paddingValues ->
-        // Konten halaman
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(Color(0xFFF5F5F5))
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        // Content berdasarkan tab yang dipilih
+        when (selectedTab) {
+            0 -> StokContent(paddingValues) // Halaman Stok
+            1 -> RiwayatContent(paddingValues) // Halaman Riwayat
+        }
+    }
+
+    // Bottom Sheet
+    if (showBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showBottomSheet = false },
+            sheetState = sheetState,
+            containerColor = Color.White,
+            dragHandle = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(40.dp)
+                            .height(4.dp)
+                            .background(
+                                color = Color.LightGray,
+                                shape = RoundedCornerShape(2.dp)
+                            )
+                    )
+                }
+            }
         ) {
-            items(3) { index ->
-                ProductCard(
-                    isHighlighted = index == 0
+            TambahProdukContent(
+                onDismiss = { showBottomSheet = false }
+            )
+        }
+    }
+}
+
+// Halaman Stok Content
+@Composable
+fun StokContent(paddingValues: PaddingValues) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .background(Color(0xFFF5F5F5))
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(3) { index ->
+            ProductCard(
+                isHighlighted = index == 0
+            )
+        }
+    }
+}
+
+// Halaman Riwayat Content
+@Composable
+fun RiwayatContent(paddingValues: PaddingValues) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .background(Color(0xFFF5F5F5))
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(5) { index ->
+            RiwayatCard(
+                namaBarang = "Autan liquid",
+                tanggal = "04 Feb 2026",
+                jumlah = if (index % 2 == 0) "+10" else "-5",
+                keterangan = if (index % 2 == 0) "Stok Masuk" else "Terjual",
+                isMasuk = index % 2 == 0
+            )
+        }
+    }
+}
+
+// Card untuk Riwayat
+@Composable
+fun RiwayatCard(
+    namaBarang: String,
+    tanggal: String,
+    jumlah: String,
+    keterangan: String,
+    isMasuk: Boolean
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = namaBarang,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    fontFamily = plusjakarta
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = tanggal,
+                    fontSize = 12.sp,
+                    color = Color.Gray,
+                    fontFamily = plusjakarta
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = keterangan,
+                    fontSize = 12.sp,
+                    color = Color.Gray,
+                    fontFamily = plusjakarta
+                )
+            }
+
+            // Jumlah dengan warna berbeda
+            Text(
+                text = jumlah,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isMasuk) Color(0xFF4CAF50) else Color(0xFFFF5252),
+                fontFamily = plusjakarta
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TambahProdukContent(onDismiss: () -> Unit) {
+    var namaProduk by remember { mutableStateOf("") }
+    var skuBarcode by remember { mutableStateOf("") }
+    var stok by remember { mutableStateOf("") }
+    var kategori by remember { mutableStateOf("") }
+    var hargaBeli by remember { mutableStateOf("") }
+    var hargaJual by remember { mutableStateOf("") }
+    var expandedKategori by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .padding(bottom = 24.dp)
+    ) {
+        // Title
+        Text(
+            text = "Tambah Produk",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black,
+            fontFamily = plusjakarta,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        // Nama Produk
+        OutlinedTextField(
+            value = namaProduk,
+            onValueChange = { namaProduk = it },
+            placeholder = {
+                Text(
+                    "Nama Produk",
+                    color = Color.Gray,
+                    fontFamily = plusjakarta
+                )
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color(0xFFE0E0E0),
+                focusedBorderColor = Color(0xFFFDB913),
+                unfocusedContainerColor = Color(0xFFF5F5F5),
+                focusedContainerColor = Color(0xFFF5F5F5)
+            )
+        )
+
+        // SKU/Kode Barcode dengan Icon Scanner
+        OutlinedTextField(
+            value = skuBarcode,
+            onValueChange = { skuBarcode = it },
+            placeholder = {
+                Text(
+                    "Sku/Kode Barcode",
+                    color = Color.Gray,
+                    fontFamily = plusjakarta
+                )
+            },
+            trailingIcon = {
+                IconButton(onClick = { /* Handle scan */ }) {
+                    Icon(
+                        painter = painterResource(R.drawable.qrcode),
+                        contentDescription = "Scan Barcode",
+                        tint = Color.Unspecified
+                    )
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color(0xFFE0E0E0),
+                focusedBorderColor = Color(0xFFFDB913),
+                unfocusedContainerColor = Color(0xFFF5F5F5),
+                focusedContainerColor = Color(0xFFF5F5F5)
+            )
+        )
+
+        // Stok
+        OutlinedTextField(
+            value = stok,
+            onValueChange = { stok = it },
+            placeholder = {
+                Text(
+                    "Stok",
+                    color = Color.Gray,
+                    fontFamily = plusjakarta
+                )
+            },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color(0xFFE0E0E0),
+                focusedBorderColor = Color(0xFFFDB913),
+                unfocusedContainerColor = Color(0xFFF5F5F5),
+                focusedContainerColor = Color(0xFFF5F5F5)
+            )
+        )
+
+        // Kategori Dropdown dengan Icon Add
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ExposedDropdownMenuBox(
+                expanded = expandedKategori,
+                onExpandedChange = { expandedKategori = it },
+                modifier = Modifier.weight(1f)
+            ) {
+                OutlinedTextField(
+                    value = kategori,
+                    onValueChange = {},
+                    readOnly = true,
+                    placeholder = {
+                        Text(
+                            "Kategori",
+                            color = Color.Gray,
+                            fontFamily = plusjakarta
+                        )
+                    },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedKategori)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedBorderColor = Color(0xFFE0E0E0),
+                        focusedBorderColor = Color(0xFFFDB913),
+                        unfocusedContainerColor = Color(0xFFF5F5F5),
+                        focusedContainerColor = Color(0xFFF5F5F5)
+                    )
+                )
+                ExposedDropdownMenu(
+                    expanded = expandedKategori,
+                    onDismissRequest = { expandedKategori = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Body Lotion") },
+                        onClick = {
+                            kategori = "Body Lotion"
+                            expandedKategori = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Sabun") },
+                        onClick = {
+                            kategori = "Sabun"
+                            expandedKategori = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Shampoo") },
+                        onClick = {
+                            kategori = "Shampoo"
+                            expandedKategori = false
+                        }
+                    )
+                }
+            }
+
+            // Tombol Add Kategori
+            IconButton(
+                onClick = { /* Handle add category */ },
+                modifier = Modifier
+                    .size(56.dp)
+                    .background(
+                        color = Color(0xFFFDB913),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Add Category",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+
+        // Harga Beli dan Harga Jual
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 24.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Harga Beli
+            OutlinedTextField(
+                value = hargaBeli,
+                onValueChange = { hargaBeli = it },
+                placeholder = {
+                    Text(
+                        "Harga Beli",
+                        color = Color.Gray,
+                        fontFamily = plusjakarta,
+                        fontSize = 14.sp
+                    )
+                },
+                leadingIcon = {
+                    Text(
+                        "Rp",
+                        color = Color.Gray,
+                        fontFamily = plusjakarta,
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color(0xFFE0E0E0),
+                    focusedBorderColor = Color(0xFFFDB913),
+                    unfocusedContainerColor = Color(0xFFF5F5F5),
+                    focusedContainerColor = Color(0xFFF5F5F5)
+                )
+            )
+
+            // Harga Jual
+            OutlinedTextField(
+                value = hargaJual,
+                onValueChange = { hargaJual = it },
+                placeholder = {
+                    Text(
+                        "Harga Jual",
+                        color = Color.Gray,
+                        fontFamily = plusjakarta,
+                        fontSize = 14.sp
+                    )
+                },
+                leadingIcon = {
+                    Text(
+                        "Rp",
+                        color = Color.Gray,
+                        fontFamily = plusjakarta,
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color(0xFFE0E0E0),
+                    focusedBorderColor = Color(0xFFFDB913),
+                    unfocusedContainerColor = Color(0xFFF5F5F5),
+                    focusedContainerColor = Color(0xFFF5F5F5)
+                )
+            )
+        }
+
+        // Buttons Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Batal Button
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(50.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFF5F5F5)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    text = "Batal",
+                    color = Color.Black,
+                    fontWeight = FontWeight.SemiBold,
+                    fontFamily = plusjakarta,
+                    fontSize = 16.sp
+                )
+            }
+
+            // Simpan Button
+            Button(
+                onClick = {
+                    // Handle save
+                    onDismiss()
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(50.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFFDB913)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    text = "Simpan",
+                    color = Color.Black,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = plusjakarta,
+                    fontSize = 16.sp
                 )
             }
         }
