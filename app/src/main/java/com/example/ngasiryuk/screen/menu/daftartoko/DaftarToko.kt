@@ -247,7 +247,7 @@ fun DaftarToko() {
                                     text = "Alamat Toko",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Medium,
-                                    color = Color.Black,
+                                    color = Color.Black, fontFamily = plusjakarta,
                                     modifier = Modifier.padding(bottom = 8.dp)
                                 )
 
@@ -309,7 +309,7 @@ fun DaftarToko() {
                                                 text = "Password Stok",
                                                 fontSize = 14.sp,
                                                 fontWeight = FontWeight.Medium,
-                                                color = Color.Black
+                                                color = Color.Black, fontFamily = plusjakarta
                                             )
                                             Text(
                                                 text = "Gunakan Password Untuk Akses Stok ?",
@@ -347,7 +347,7 @@ fun DaftarToko() {
                                         text = "Masukkan Password",
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Medium,
-                                        color = Color.Black
+                                        color = Color.Black, fontFamily = plusjakarta
                                     )
                                 }
 
@@ -422,7 +422,7 @@ fun DaftarToko() {
                             text = "Simpan Profil",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.Black
+                            color = Color.Black, fontFamily = plusjakarta
                         )
                     }
                 }

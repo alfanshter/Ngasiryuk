@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.ngasiryuk.screen.menu.daftartoko.DaftarToko
+import com.example.ngasiryuk.screen.menu.dashboard.Dashboard
 import com.example.ngasiryuk.ui.theme.NgasiryukTheme
 
 class MainActivity : ComponentActivity() {
@@ -19,7 +20,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            DaftarToko()
+            Dashboard()
         }
     }
 }
