@@ -17,6 +17,7 @@ import com.example.ngasiryuk.screen.menu.dashboard.Dashboard
 import com.example.ngasiryuk.screen.menu.kategori.ListKategoriScreen
 import com.example.ngasiryuk.screen.menu.kelolaproduk.KelolaProduk
 import com.example.ngasiryuk.screen.menu.manajemenstok.ManajemenStok
+import com.example.ngasiryuk.screen.pengaturan.PengaturanPassword
 import com.example.ngasiryuk.ui.theme.NgasiryukTheme
 
 class MainActivity : ComponentActivity() {
@@ -24,7 +25,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            KasirScreen()
+            PengaturanPassword()
         }
     }
 }

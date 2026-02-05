@@ -87,8 +87,8 @@ fun Dashboard() {
 
         ),
         MenuItem(
-            title = "Feedback",
-            iconRes = R.drawable.feedback,
+            title = "Import Database",
+            iconRes = R.drawable.importdb,
 
         ),
         MenuItem(
