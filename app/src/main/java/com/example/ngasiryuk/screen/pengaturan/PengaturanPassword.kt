@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.galonqu.commond.plusjakarta
 import com.example.ngasiryuk.R
+import com.example.ngasiryuk.screen.component.dialog.TambahPasswordDialog
 
 @Composable
 fun PengaturanPassword() {
@@ -437,116 +438,7 @@ fun MenuSecurityItem(
     }
 }
 
-@Composable
-fun TambahPasswordDialog(
-    onDismiss: () -> Unit,
-    onSave: (String) -> Unit
-) {
-    var password by remember { mutableStateOf("") }
 
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp)
-            ) {
-                // Title
-                Text(
-                    text = "Tambah Password",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black,
-                    fontFamily = plusjakarta,
-                    modifier = Modifier.padding(bottom = 20.dp)
-                )
-
-                // Input Password
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    placeholder = {
-                        Text(
-                            "Masukkan Password",
-                            color = Color.Gray,
-                            fontFamily = plusjakarta,
-                            fontSize = 14.sp
-                        )
-                    },
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 24.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedBorderColor = Color(0xFFE0E0E0),
-                        focusedBorderColor = Color(0xFFFDB913),
-                        unfocusedContainerColor = Color(0xFFF5F5F5),
-                        focusedContainerColor = Color(0xFFF5F5F5)
-                    )
-                )
-
-                // Buttons Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Batal Button
-                    Button(
-                        onClick = onDismiss,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(50.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFF5F5F5)
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(
-                            text = "Batal",
-                            color = Color.Black,
-                            fontWeight = FontWeight.SemiBold,
-                            fontFamily = plusjakarta,
-                            fontSize = 16.sp
-                        )
-                    }
-
-                    // Simpan Button
-                    Button(
-                        onClick = {
-                            if (password.isNotEmpty()) {
-                                onSave(password)
-                            }
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(50.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFFDB913)
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        enabled = password.isNotEmpty()
-                    ) {
-                        Text(
-                            text = "Simpan",
-                            color = Color.Black,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = plusjakarta,
-                            fontSize = 16.sp
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
 
 @Preview(showBackground = true)
 @Composable
