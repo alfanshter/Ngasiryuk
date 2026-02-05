@@ -4,7 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import com.example.ngasiryuk.screen.menu.ListCustomer
 import com.example.ngasiryuk.screen.menu.daftarkasir.DaftarKasir
+import com.example.ngasiryuk.screen.menu.manajemenstok.ManajemenStok
 import com.example.ngasiryuk.screen.menu.rekappenjualan.RekapPenjualan
 import com.example.ngasiryuk.screen.pengaturan.PengaturanPassword
 
@@ -13,7 +15,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            RekapPenjualan()
+            ListCustomer()
         }
     }
 }
