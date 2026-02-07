@@ -40,11 +40,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.galonqu.commond.plusjakarta
 import com.example.ngasiryuk.screen.component.dialog.TambahCustomerDialog
 
 @Composable
-fun ListCustomer() {
+fun ListCustomer(navController: NavController) {
     var showTambahCustomerDialog by remember { mutableStateOf(false) }
     var customerList by remember {
         mutableStateOf(
@@ -76,7 +78,7 @@ fun ListCustomer() {
                 ) {
                     // Tombol Back Bulat
                     IconButton(
-                        onClick = { /* Handle back navigation */ },
+                        onClick = { navController.popBackStack()},
                         modifier = Modifier
                             .size(48.dp)
                             .background(
@@ -225,6 +227,6 @@ fun CustomerCard(
 @Preview(showBackground = true)
 @Composable
 private fun ListCustomerPreview() {
-    ListCustomer()
+    ListCustomer(navController = rememberNavController())
 
 }

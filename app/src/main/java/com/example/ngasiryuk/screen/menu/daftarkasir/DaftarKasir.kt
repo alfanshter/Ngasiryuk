@@ -46,11 +46,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.galonqu.commond.plusjakarta
 import com.example.ngasiryuk.screen.component.dialog.TambahKasirDialog
 
 @Composable
-fun DaftarKasir() {
+fun DaftarKasir(navController: NavController) {
     var showTambahKasirDialog by remember { mutableStateOf(false) }
     var kasirList by remember {
         mutableStateOf(
@@ -82,7 +84,7 @@ fun DaftarKasir() {
                 ) {
                     // Tombol Back Bulat
                     IconButton(
-                        onClick = { /* Handle back navigation */ },
+                        onClick = { navController.popBackStack() },
                         modifier = Modifier
                             .size(48.dp)
                             .background(
@@ -231,6 +233,6 @@ fun KasirCard(
 @Preview(showBackground = true)
 @Composable
 private fun DaftarKasirPreview() {
-    DaftarKasir()
+    DaftarKasir(navController = rememberNavController())
 
 }

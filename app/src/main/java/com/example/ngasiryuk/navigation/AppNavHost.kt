@@ -37,47 +37,47 @@ fun AppNavHost(
 
         // Daftar Kasir Screen
         composable(AppScreen.DaftarKasir.route) {
-            DaftarKasir()
+            DaftarKasir(navController= navController)
         }
 
         // Dashboard Screen
         composable(AppScreen.Dashboard.route) {
-            Dashboard()
+            Dashboard(navController = navController)
         }
 
         // Kasir Screen
         composable(AppScreen.Kasir.route) {
-            KasirScreen()
+            KasirScreen(navController= navController)
         }
 
         // Kelola Produk Screen
         composable(AppScreen.KelolaProduk.route) {
-            KelolaProduk()
+            KelolaProduk(navController = navController)
         }
 
         // Manajemen Stok Screen
         composable(AppScreen.ManajemenStok.route) {
-            ManajemenStok()
+            ManajemenStok(navController = navController)
         }
 
         // Rekap Penjualan Screen
         composable(AppScreen.RekapPenjualan.route) {
-            RekapPenjualan()
+            RekapPenjualan(navController = navController)
         }
 
         // List Kategori Screen
         composable(AppScreen.ListKategori.route) {
-            ListKategoriScreen()
+            ListKategoriScreen(navController = navController)
         }
 
         // List Customer Screen
         composable(AppScreen.ListCustomer.route) {
-            ListCustomer()
+            ListCustomer(navController= navController)
         }
 
         // Pengaturan Password Screen
         composable(AppScreen.PengaturanPassword.route) {
-            PengaturanPassword()
+            PengaturanPassword(navController= navController)
         }
     }
 }

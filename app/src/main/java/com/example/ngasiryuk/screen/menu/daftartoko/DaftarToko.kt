@@ -416,7 +416,7 @@ fun DaftarToko(
                         onClick = { navController.navigate(AppScreen.Dashboard.route) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                            .padding(start = 16.dp, end = 16.dp, bottom = 25.dp)
                             .height(56.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(

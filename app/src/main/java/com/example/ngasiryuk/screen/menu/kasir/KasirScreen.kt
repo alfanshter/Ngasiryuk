@@ -58,6 +58,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.galonqu.commond.plusjakarta
 import com.example.ngasiryuk.R
 import com.example.ngasiryuk.screen.component.dialog.TambahCustomerDialog
@@ -65,7 +67,7 @@ import com.example.ngasiryuk.screen.component.dialog.TambahKeKeranjangDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun KasirScreen() {
+fun KasirScreen(navController: NavController) {
     var pelanggan by remember { mutableStateOf("Muhib Goat") }
     var expandedPelanggan by remember { mutableStateOf(false) }
     var showTambahCustomerDialog by remember { mutableStateOf(false) }
@@ -102,7 +104,7 @@ fun KasirScreen() {
                 ) {
                     // Tombol Back Bulat
                     IconButton(
-                        onClick = { /* Handle back navigation */ },
+                        onClick = { navController.popBackStack() },
                         modifier = Modifier
                             .size(48.dp)
                             .background(
@@ -1056,6 +1058,6 @@ fun KeranjangItemCard(
 @Preview(showBackground = true)
 @Composable
 private fun KasirScreenPreview() {
-    KasirScreen()
+    KasirScreen(navController = rememberNavController())
 
 }

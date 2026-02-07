@@ -54,13 +54,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.galonqu.commond.plusjakarta
 import com.example.ngasiryuk.R
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ManajemenStok() {
+fun ManajemenStok(navController: NavController) {
     val pagerState = rememberPagerState(pageCount = { 3 })
     val scope = rememberCoroutineScope()
     var showDialog by remember { mutableStateOf(false) }
@@ -87,7 +89,7 @@ fun ManajemenStok() {
                     ) {
                         // Tombol Back Bulat
                         IconButton(
-                            onClick = { /* Handle back navigation */ },
+                            onClick = { navController.popBackStack() },
                             modifier = Modifier
                                 .size(48.dp)
                                 .background(
@@ -882,5 +884,5 @@ fun TambahStokDialog(
 @Preview(showBackground = true)
 @Composable
 private fun ManajemenStokPreview() {
-    ManajemenStok()
+    ManajemenStok(navController = rememberNavController())
 }

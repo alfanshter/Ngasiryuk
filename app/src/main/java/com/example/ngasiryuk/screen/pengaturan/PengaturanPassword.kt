@@ -49,12 +49,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.galonqu.commond.plusjakarta
 import com.example.ngasiryuk.R
 import com.example.ngasiryuk.screen.component.dialog.TambahPasswordDialog
 
 @Composable
-fun PengaturanPassword() {
+fun PengaturanPassword(navController: NavController) {
     var showPasswordDialog by remember { mutableStateOf(false) }
     var menuStates by remember {
         mutableStateOf(
@@ -92,7 +94,7 @@ fun PengaturanPassword() {
                 ) {
                     // Tombol Back Bulat
                     IconButton(
-                        onClick = { /* Handle back navigation */ },
+                        onClick = { navController.popBackStack() },
                         modifier = Modifier
                             .size(48.dp)
                             .background(
@@ -443,6 +445,6 @@ fun MenuSecurityItem(
 @Preview(showBackground = true)
 @Composable
 private fun PengaturanPasswordPreview() {
-    PengaturanPassword()
+    PengaturanPassword(navController = rememberNavController())
 
 }

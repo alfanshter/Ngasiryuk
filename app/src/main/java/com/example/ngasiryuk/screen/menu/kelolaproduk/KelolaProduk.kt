@@ -57,12 +57,14 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.galonqu.commond.plusjakarta
 import com.example.ngasiryuk.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun KelolaProduk() {
+fun KelolaProduk(navController: NavController) {
     var selectedTab by remember { mutableStateOf(0) }
     var showBottomSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -89,7 +91,7 @@ fun KelolaProduk() {
                     ) {
                         // Tombol Back Bulat
                         IconButton(
-                            onClick = { /* Handle back navigation */ },
+                            onClick = { navController.popBackStack() },
                             modifier = Modifier
                                 .size(48.dp)
                                 .background(
@@ -803,6 +805,6 @@ fun ProductCard(isHighlighted: Boolean = false) {
 @Preview(showBackground = true)
 @Composable
 private fun KelolaProdukPreview() {
-    KelolaProduk()
+    KelolaProduk(navController = rememberNavController())
 
 }

@@ -45,64 +45,71 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
 import com.example.galonqu.commond.plusjakarta
+import com.example.ngasiryuk.AppScreen
 import com.example.ngasiryuk.R
 
 data class MenuItem(
     val title: String,
     val iconRes: Int,  // Ubah ke Int untuk painterResource
+    val route: String? = null
 )
 
 @Composable
-fun Dashboard() {
-    // Data menu items
+fun Dashboard(navController: NavHostController) {
+    // Data menu items dengan route navigation
     val menuItems = listOf(
         MenuItem(
             title = "Barang/Jasa",
-            iconRes = R.drawable.barangjasa
+            iconRes = R.drawable.barangjasa,
+            route = AppScreen.KelolaProduk.route
         ),
         MenuItem(
             title = "Kategori",
             iconRes = R.drawable.kategori,
-
+            route = AppScreen.ListKategori.route
         ),
         MenuItem(
             title = "Manajemen Stok",
             iconRes = R.drawable.manajemenstok,
-
+            route = AppScreen.ManajemenStok.route
         ),
         MenuItem(
             title = "Kasir",
             iconRes = R.drawable.kasir,
-
+            route = AppScreen.Kasir.route
         ),
         MenuItem(
             title = "Penjualan",
             iconRes = R.drawable.transaksi,
-
+            route = AppScreen.RekapPenjualan.route
         ),
         MenuItem(
             title = "Pengaturan",
             iconRes = R.drawable.pengaturan,
-
+            route = AppScreen.PengaturanPassword.route
         ),
         MenuItem(
             title = "Import Database",
             iconRes = R.drawable.importdb,
-
+            route = null // Belum ada screen
         ),
         MenuItem(
             title = "Reset Database",
             iconRes = R.drawable.resetdb,
-
+            route = null // Belum ada screen
         ),
         MenuItem(
             title = "Manajemen Customer",
             iconRes = R.drawable.customer,
+            route = AppScreen.ListCustomer.route
         ),
         MenuItem(
             title = "Export Database",
             iconRes = R.drawable.importdb,
+            route = null // Belum ada screen
         )
     )
 
@@ -125,7 +132,7 @@ fun Dashboard() {
                 ) {
                     // Tombol Back Bulat
                     IconButton(
-                        onClick = { /* Handle back navigation */ },
+                        onClick = { navController.popBackStack() },
                         modifier = Modifier
                             .size(48.dp)
                             .background(
@@ -240,7 +247,11 @@ fun Dashboard() {
                             rowItems.forEach { menuItem ->
                                 MenuCard(
                                     menuItem = menuItem,
-                                    onClick = { /* Handle menu click */ },
+                                    onClick = {
+                                        menuItem.route?.let { route ->
+                                            navController.navigate(route)
+                                        }
+                                    },
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -311,6 +322,6 @@ fun MenuCard(
 @Preview(showBackground = true)
 @Composable
 private fun DashboardPreview() {
-    Dashboard()
+    Dashboard(navController = rememberNavController())
     
 }

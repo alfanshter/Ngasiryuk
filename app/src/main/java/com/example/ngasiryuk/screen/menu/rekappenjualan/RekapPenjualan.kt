@@ -52,13 +52,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.galonqu.commond.plusjakarta
 import com.example.ngasiryuk.R
 import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RekapPenjualan() {
+fun RekapPenjualan(navController: NavController) {
     var selectedDate by remember { mutableStateOf("12-09-2026") }
     var showDatePicker by remember { mutableStateOf(false) }
 
@@ -95,7 +97,7 @@ fun RekapPenjualan() {
                     ) {
                         // Tombol Back Bulat
                         IconButton(
-                            onClick = { /* Handle back navigation */ },
+                            onClick = {navController.popBackStack() },
                             modifier = Modifier
                                 .size(48.dp)
                                 .background(
@@ -497,6 +499,6 @@ fun PenjualanCard(item: PenjualanItem) {
 @Preview(showBackground = true)
 @Composable
 private fun RekapPenjualanPreview() {
-    RekapPenjualan()
+    RekapPenjualan(navController = rememberNavController())
 
 }

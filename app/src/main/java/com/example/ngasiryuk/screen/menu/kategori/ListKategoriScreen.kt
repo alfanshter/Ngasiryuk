@@ -46,10 +46,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.galonqu.commond.plusjakarta
 
 @Composable
-fun ListKategoriScreen() {
+fun ListKategoriScreen(navController: NavController) {
     var showDialog by remember { mutableStateOf(false) }
 
     // Sample data kategori
@@ -83,7 +85,7 @@ fun ListKategoriScreen() {
                 ) {
                     // Tombol Back Bulat
                     IconButton(
-                        onClick = { /* Handle back navigation */ },
+                        onClick = { navController.popBackStack() },
                         modifier = Modifier
                             .size(48.dp)
                             .background(
@@ -334,6 +336,6 @@ fun TambahKategoriDialog(
 @Preview(showBackground = true)
 @Composable
 private fun ListkategoriScreenpreview() {
-    ListKategoriScreen()
+    ListKategoriScreen(navController = rememberNavController())
 
 }
