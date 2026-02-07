@@ -54,11 +54,16 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.galonqu.commond.plusjakarta
+import com.example.ngasiryuk.AppScreen
 import com.example.ngasiryuk.R
 
 @Composable
-fun DaftarToko() {
+fun DaftarToko(
+    navController: NavController
+) {
     var namaToko by remember { mutableStateOf("") }
     var alamatToko by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -408,7 +413,7 @@ fun DaftarToko() {
 
                     // Simpan Profil Button
                     Button(
-                        onClick = { /* Handle save */ },
+                        onClick = { navController.navigate(AppScreen.Dashboard.route) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
@@ -437,5 +442,5 @@ fun DaftarToko() {
 @Preview(showBackground = true)
 @Composable
 private fun DaftarTokoPreview() {
-    DaftarToko()
+    DaftarToko(navController = rememberNavController())
 }

@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Ngasiryuk</string>
+    <string name="title_activity_splash_screen">SplashScreenActivity</string>
+    <string name="dashboard">dashboard</string>
 </resources>
