@@ -30,6 +30,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,11 +46,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.example.galonqu.commond.plusjakarta
 import com.example.ngasiryuk.AppScreen
 import com.example.ngasiryuk.R
+import com.example.ngasiryuk.di.AppContainer
 
 data class MenuItem(
     val title: String,
@@ -58,7 +61,17 @@ data class MenuItem(
 )
 
 @Composable
-fun Dashboard(navController: NavHostController) {
+fun Dashboard(
+    navController: NavHostController,
+    viewModel: DashboardViewModel = viewModel(factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+            @Suppress("UNCHECKED_CAST")
+            return AppContainer.provideDashboardViewModel() as T
+        }
+    })
+) {
+    val toko by viewModel.toko.collectAsState()
+
     // Data menu items dengan route navigation
     val menuItems = listOf(
         MenuItem(
@@ -127,28 +140,9 @@ fun Dashboard(navController: NavHostController) {
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(top = 8.dp),
+                        .padding(top = 15.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Tombol Back Bulat
-                    IconButton(
-                        onClick = { navController.popBackStack() },
-                        modifier = Modifier
-                            .size(48.dp)
-                            .background(
-                                color = Color(0xFFD4A419),
-                                shape = CircleShape
-                            )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Back",
-                            tint = Color.Black
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
                     // Title
                     Text(
                         text = "Selamat Datang",
@@ -212,7 +206,7 @@ fun Dashboard(navController: NavHostController) {
                                 Spacer(modifier = Modifier.width(12.dp))
 
                                 Text(
-                                    text = "Galonku",
+                                    text = toko?.namaToko ?: "Nama Toko",
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.Black,
@@ -222,7 +216,9 @@ fun Dashboard(navController: NavHostController) {
 
                             // Edit Icon
                             IconButton(
-                                onClick = { /* Handle edit */ },
+                                onClick = {
+                                    navController.navigate(AppScreen.DaftarToko.route)
+                                },
                                 modifier = Modifier.size(36.dp)
                             ) {
                                 Icon(

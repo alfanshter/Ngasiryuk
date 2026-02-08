@@ -10,6 +10,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import com.example.ngasiryuk.MainActivity
+import com.example.ngasiryuk.di.AppContainer
 import com.example.ngasiryuk.screen.splashscreen.ui.theme.NgasiryukTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -35,7 +36,17 @@ class SplashScreenActivity : ComponentActivity() {
             delay(1500L)
             if (!isFinishing && !navigated) {
                 navigated = true
-                startActivity(Intent(this@SplashScreenActivity, MainActivity::class.java))
+
+                // Check if toko already registered
+                val checkTokoExistsUseCase = AppContainer.provideCheckTokoExistsUseCase()
+                val isTokoExists = checkTokoExistsUseCase()
+
+                // Create intent with extra data to indicate initial route
+                val intent = Intent(this@SplashScreenActivity, MainActivity::class.java).apply {
+                    putExtra("INITIAL_ROUTE", if (isTokoExists) "dashboard" else "daftar_toko")
+                }
+
+                startActivity(intent)
                 finish()
             }
         }

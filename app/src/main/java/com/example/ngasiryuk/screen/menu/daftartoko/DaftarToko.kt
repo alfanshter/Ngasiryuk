@@ -1,9 +1,12 @@
 package com.example.ngasiryuk.screen.menu.daftartoko
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,22 +25,22 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,30 +49,83 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import coil.compose.AsyncImage
 import com.example.galonqu.commond.plusjakarta
 import com.example.ngasiryuk.AppScreen
 import com.example.ngasiryuk.R
+import com.example.ngasiryuk.di.AppContainer
+import com.example.ngasiryuk.utils.ImageUtils
+import com.example.ngasiryuk.utils.rememberImagePermission
+import java.io.File
 
 @Composable
 fun DaftarToko(
-    navController: NavController
+    navController: NavController,
+    viewModel: DaftarTokoViewModel = viewModel(factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+            @Suppress("UNCHECKED_CAST")
+            return AppContainer.provideDaftarTokoViewModel() as T
+        }
+    })
 ) {
-    var namaToko by remember { mutableStateOf("") }
-    var alamatToko by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var passwordStokEnabled by remember { mutableStateOf(false) }
-    var passwordVisible by remember { mutableStateOf(false) }
+    val state by viewModel.state.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+
+    // Permission handling
+    val (hasPermission, requestPermission) = rememberImagePermission(
+        onPermissionGranted = {},
+        onPermissionDenied = {
+            // Show snackbar when permission denied
+        }
+    )
+
+    // Image picker launcher
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            // Save image to internal storage
+            val savedPath = ImageUtils.saveImageToInternalStorage(
+                context = context,
+                uri = it,
+                fileName = "logo_toko"
+            )
+            savedPath?.let { path ->
+                viewModel.onEvent(DaftarTokoEvent.OnLogoSelected(path))
+            }
+        }
+    }
+
+    // Handle navigation when save is successful
+    LaunchedEffect(state.isSaveSuccess) {
+        if (state.isSaveSuccess) {
+            navController.navigate(AppScreen.Dashboard.route) {
+                popUpTo(AppScreen.DaftarToko.route) { inclusive = true }
+            }
+            viewModel.resetSaveSuccess()
+        }
+    }
+
+    // Show error message
+    LaunchedEffect(state.error) {
+        state.error?.let { error ->
+            snackbarHostState.showSnackbar(error)
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             // Custom Top Bar dengan Rounded Bottom
             Box(
@@ -146,10 +202,19 @@ fun DaftarToko(
                         ) {
                             // Upload Logo Section
                             Box(
-                                modifier = Modifier.size(120.dp),
+                                modifier = Modifier
+                                    .size(120.dp)
+                                    .clickable {
+                                        // Check permission first
+                                        if (hasPermission) {
+                                            imagePickerLauncher.launch("image/*")
+                                        } else {
+                                            requestPermission()
+                                        }
+                                    },
                                 contentAlignment = Alignment.Center
                             ) {
-                                // Background Circle
+                                // Background Circle with image
                                 Box(
                                     modifier = Modifier
                                         .size(100.dp)
@@ -157,11 +222,24 @@ fun DaftarToko(
                                         .background(Color(0xFFE8E8E8)),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Image(
-                                        painter = painterResource(R.drawable.icontoko),
-                                        contentDescription = "Store Icon",
-                                        modifier = Modifier.size(48.dp),
-                                    )
+                                    if (state.logoPath != null && File(state.logoPath).exists()) {
+                                        // Show selected image
+                                        AsyncImage(
+                                            model = File(state.logoPath),
+                                            contentDescription = "Logo Toko",
+                                            modifier = Modifier
+                                                .size(100.dp)
+                                                .clip(CircleShape),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    } else {
+                                        // Show default icon
+                                        Image(
+                                            painter = painterResource(R.drawable.icontoko),
+                                            contentDescription = "Store Icon",
+                                            modifier = Modifier.size(48.dp),
+                                        )
+                                    }
                                 }
 
                                 // Camera Button
@@ -216,8 +294,8 @@ fun DaftarToko(
                                 )
 
                                 OutlinedTextField(
-                                    value = namaToko,
-                                    onValueChange = { namaToko = it },
+                                    value = state.namaToko,
+                                    onValueChange = { viewModel.onEvent(DaftarTokoEvent.OnNamaTokoChange(it)) },
                                     placeholder = {
                                         Text(
                                             text = "Contoh : Galonku",
@@ -257,8 +335,8 @@ fun DaftarToko(
                                 )
 
                                 OutlinedTextField(
-                                    value = alamatToko,
-                                    onValueChange = { alamatToko = it },
+                                    value = state.alamatToko,
+                                    onValueChange = { viewModel.onEvent(DaftarTokoEvent.OnAlamatTokoChange(it)) },
                                     placeholder = {
                                         Text(
                                             text = "Masukkan Alamat Lengkap ....",
@@ -283,129 +361,6 @@ fun DaftarToko(
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            // Password Stok Toggle
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = Color(0xFFF5F5F5)
-                                )
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Lock,
-                                            contentDescription = "Lock",
-                                            tint = Color.Gray
-                                        )
-                                        Spacer(modifier = Modifier.width(12.dp))
-                                        Column {
-                                            Text(
-                                                text = "Password Stok",
-                                                fontSize = 14.sp,
-                                                fontWeight = FontWeight.Medium,
-                                                color = Color.Black, fontFamily = plusjakarta
-                                            )
-                                            Text(
-                                                text = "Gunakan Password Untuk Akses Stok ?",
-                                                fontSize = 11.sp,
-                                                color = Color.Gray
-                                            )
-                                        }
-                                    }
-
-                                    Switch(
-                                        checked = passwordStokEnabled,
-                                        onCheckedChange = { passwordStokEnabled = it },
-                                        colors = SwitchDefaults.colors(
-                                            checkedThumbColor = Color.White,
-                                            checkedTrackColor = Color(0xFFFDB913),
-                                            uncheckedThumbColor = Color.White,
-                                            uncheckedTrackColor = Color.Gray
-                                        )
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            // Masukkan Password
-                            Column(
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "Masukkan Password",
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = Color.Black, fontFamily = plusjakarta
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                OutlinedTextField(
-                                    value = password,
-                                    onValueChange = { password = it },
-                                    placeholder = {
-                                        Text(
-                                            text = "Password",
-                                            color = Color.Gray
-                                        )
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = Icons.Default.Lock,
-                                            contentDescription = "Lock",
-                                            tint = Color.Gray
-                                        )
-                                    },
-                                    trailingIcon = {
-                                        IconButton(
-                                            onClick = {
-                                                passwordVisible = !passwordVisible
-                                            }
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(
-                                                    id = if (passwordVisible)
-                                                        R.drawable.terlihat   // drawable saat password terlihat
-                                                    else
-                                                        R.drawable.tertutup      // drawable saat password disembunyikan
-                                                ),
-                                                contentDescription = "Toggle Password",
-                                                tint = Color.Gray
-                                            )
-                                        }
-                                    },
-                                    visualTransformation = if (passwordVisible)
-                                        VisualTransformation.None
-                                    else
-                                        PasswordVisualTransformation(),
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        unfocusedContainerColor = Color(0xFFF5F5F5),
-                                        focusedContainerColor = Color(0xFFF5F5F5),
-                                        unfocusedBorderColor = Color.Transparent,
-                                        focusedBorderColor = Color(0xFFFDB913)
-                                    )
-                                )
-                            }
                         }
                     }
 
@@ -413,7 +368,13 @@ fun DaftarToko(
 
                     // Simpan Profil Button
                     Button(
-                        onClick = { navController.navigate(AppScreen.Dashboard.route) },
+                        onClick = {
+                            if (state.isEditMode) {
+                                viewModel.onEvent(DaftarTokoEvent.OnUpdateToko)
+                            } else {
+                                viewModel.onEvent(DaftarTokoEvent.OnSaveToko)
+                            }
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = 16.dp, end = 16.dp, bottom = 25.dp)
@@ -421,14 +382,23 @@ fun DaftarToko(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFFFDB913)
-                        )
+                        ),
+                        enabled = !state.isLoading
                     ) {
-                        Text(
-                            text = "Simpan Profil",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black, fontFamily = plusjakarta
-                        )
+                        if (state.isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = Color.Black
+                            )
+                        } else {
+                            Text(
+                                text = if (state.isEditMode) "Update Profil" else "Simpan Profil",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black,
+                                fontFamily = plusjakarta
+                            )
+                        }
                     }
                 }
 
