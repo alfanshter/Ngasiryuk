@@ -144,7 +144,7 @@ fun DaftarToko(
                 ) {
                     // Tombol Back Bulat
                     IconButton(
-                        onClick = { /* Handle back navigation */ },
+                        onClick = { navController.popBackStack() },
                         modifier = Modifier
                             .size(48.dp)
                             .background(

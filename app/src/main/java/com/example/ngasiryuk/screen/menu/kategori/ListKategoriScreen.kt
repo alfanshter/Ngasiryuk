@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -33,6 +34,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,25 +48,26 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.galonqu.commond.plusjakarta
+import com.example.ngasiryuk.data.local.entity.KategoriEntity
+import com.example.ngasiryuk.di.AppContainer
 
 @Composable
 fun ListKategoriScreen(navController: NavController) {
-    var showDialog by remember { mutableStateOf(false) }
+    val viewModel: ListKategoriViewModel = viewModel(factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+            @Suppress("UNCHECKED_CAST")
+            return AppContainer.provideListKategoriViewModel() as T
+        }
+    })
 
-    // Sample data kategori
-    var kategoriList by remember {
-        mutableStateOf(
-            listOf(
-                "Autan liquid",
-                "Autan liquid",
-                "Autan liquid",
-                "Autan liquid"
-            )
-        )
-    }
+    var showDialog by remember { mutableStateOf(false) }
+    var editingKategori by remember { mutableStateOf<KategoriEntity?>(null) }
+
+    val kategoriList by viewModel.kategoriList.collectAsState()
 
     Scaffold(
         topBar = {
@@ -138,24 +141,39 @@ fun ListKategoriScreen(navController: NavController) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(kategoriList.size) { index ->
+            items(kategoriList) { kategori ->
                 KategoriCard(
-                    namaKategori = kategoriList[index],
-                    onEdit = { /* Handle edit */ },
-                    onDelete = { /* Handle delete */ }
+                    kategori = kategori,
+                    onEdit = {
+                        editingKategori = kategori
+                        showDialog = true
+                    },
+                    onDelete = {
+                        viewModel.deleteKategori(kategori)
+                    }
                 )
             }
         }
     }
 
-    // Dialog Tambah Kategori
+    // Dialog Tambah/Edit Kategori
     if (showDialog) {
         TambahKategoriDialog(
-            onDismiss = { showDialog = false },
-            onSave = { namaKategori ->
-                // Handle save kategori baru
-                kategoriList = kategoriList + namaKategori
+            kategoriToEdit = editingKategori,
+            onDismiss = {
                 showDialog = false
+                editingKategori = null
+            },
+            onSave = { namaKategori ->
+                if (editingKategori != null) {
+                    // Edit existing kategori
+                    viewModel.updateKategori(editingKategori!!.id, namaKategori)
+                } else {
+                    // Add new kategori
+                    viewModel.addKategori(namaKategori)
+                }
+                showDialog = false
+                editingKategori = null
             }
         )
     }
@@ -163,7 +181,7 @@ fun ListKategoriScreen(navController: NavController) {
 
 @Composable
 fun KategoriCard(
-    namaKategori: String,
+    kategori: KategoriEntity,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -182,7 +200,7 @@ fun KategoriCard(
         ) {
             // Nama Kategori
             Text(
-                text = namaKategori,
+                text = kategori.namaKategori,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.Black,
@@ -226,10 +244,11 @@ fun KategoriCard(
 
 @Composable
 fun TambahKategoriDialog(
+    kategoriToEdit: KategoriEntity? = null,
     onDismiss: () -> Unit,
     onSave: (String) -> Unit
 ) {
-    var namaKategori by remember { mutableStateOf("") }
+    var namaKategori by remember { mutableStateOf(kategoriToEdit?.namaKategori ?: "") }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -246,7 +265,7 @@ fun TambahKategoriDialog(
             ) {
                 // Title
                 Text(
-                    text = "Tambah Kategori",
+                    text = if (kategoriToEdit != null) "Edit Kategori" else "Tambah Kategori",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black,
