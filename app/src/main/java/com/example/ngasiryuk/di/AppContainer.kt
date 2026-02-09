@@ -2,6 +2,8 @@ package com.example.ngasiryuk.di
 
 import android.content.Context
 import com.example.ngasiryuk.data.local.database.AppDatabase
+import com.example.ngasiryuk.data.repository.KasirRepository
+import com.example.ngasiryuk.data.repository.KasirRepositoryImpl
 import com.example.ngasiryuk.data.repository.KategoriRepositoryImpl
 import com.example.ngasiryuk.data.repository.TokoRepositoryImpl
 import com.example.ngasiryuk.data.repository.KategoriRepository
@@ -14,6 +16,7 @@ import com.example.ngasiryuk.domain.usecase.CheckTokoExistsUseCase
 import com.example.ngasiryuk.domain.usecase.GetTokoUseCase
 import com.example.ngasiryuk.domain.usecase.SaveTokoUseCase
 import com.example.ngasiryuk.domain.usecase.UpdateTokoUseCase
+import com.example.ngasiryuk.screen.menu.daftarkasir.DaftarKasirViewModel
 import com.example.ngasiryuk.screen.menu.daftartoko.DaftarTokoViewModel
 import com.example.ngasiryuk.screen.menu.dashboard.DashboardViewModel
 import com.example.ngasiryuk.screen.menu.kategori.ListKategoriViewModel
@@ -27,6 +30,7 @@ object AppContainer {
     private lateinit var kategoriRepository: KategoriRepository
     private lateinit var produkRepository: ProdukRepository
     private lateinit var riwayatStokRepository: RiwayatStokRepository
+    private lateinit var kasirRepository: KasirRepository
 
     fun initialize(context: Context) {
         database = AppDatabase.getDatabase(context)
@@ -34,6 +38,7 @@ object AppContainer {
         kategoriRepository = KategoriRepositoryImpl(database.kategoriDao())
         produkRepository = ProdukRepositoryImpl(database.produkDao(), database.riwayatStokDao())
         riwayatStokRepository = RiwayatStokRepositoryImpl(database.riwayatStokDao())
+        kasirRepository = KasirRepositoryImpl(database.kasirDao())
     }
 
     fun provideGetTokoUseCase(): GetTokoUseCase {
@@ -84,6 +89,12 @@ object AppContainer {
         return ManajemenStokViewModel(
             produkRepository = produkRepository,
             riwayatStokRepository = riwayatStokRepository
+        )
+    }
+
+    fun provideDaftarKasirViewModel(): DaftarKasirViewModel {
+        return DaftarKasirViewModel(
+            kasirRepository = kasirRepository
         )
     }
 }

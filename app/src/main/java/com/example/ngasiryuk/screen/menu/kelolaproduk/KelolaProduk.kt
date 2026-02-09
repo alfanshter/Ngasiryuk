@@ -731,24 +731,6 @@ fun TambahProdukContent(
                     }
                 }
             }
-
-            // Tombol Add Kategori
-            IconButton(
-                onClick = { /* Handle add category */ },
-                modifier = Modifier
-                    .size(56.dp)
-                    .background(
-                        color = Color(0xFFFDB913),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add Category",
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
         }
 
         // Harga Beli dan Harga Jual

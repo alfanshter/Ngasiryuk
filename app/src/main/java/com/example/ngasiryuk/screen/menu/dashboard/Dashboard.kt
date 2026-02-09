@@ -90,6 +90,11 @@ fun Dashboard(
             route = AppScreen.Kasir.route
         ),
         MenuItem(
+            title = "Daftar Kasir",
+            iconRes = R.drawable.kasir,
+            route = AppScreen.DaftarKasir.route
+        ),
+        MenuItem(
             title = "Penjualan",
             iconRes = R.drawable.transaksi,
             route = AppScreen.RekapPenjualan.route

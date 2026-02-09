@@ -3,7 +3,6 @@ package com.example.ngasiryuk.screen.menu.daftarkasir
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -17,22 +16,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,25 +41,30 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.galonqu.commond.plusjakarta
+import com.example.ngasiryuk.data.local.entity.KasirEntity
+import com.example.ngasiryuk.di.AppContainer
+import com.example.ngasiryuk.screen.component.dialog.EditKasirDialog
 import com.example.ngasiryuk.screen.component.dialog.TambahKasirDialog
 
 @Composable
-fun DaftarKasir(navController: NavController) {
+fun DaftarKasir(
+    navController: NavController,
+    viewModel: DaftarKasirViewModel = viewModel(factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+            @Suppress("UNCHECKED_CAST")
+            return AppContainer.provideDaftarKasirViewModel() as T
+        }
+    })
+) {
     var showTambahKasirDialog by remember { mutableStateOf(false) }
-    var kasirList by remember {
-        mutableStateOf(
-            mutableListOf(
-                "Muhib Goat",
-                "Autan liquid",
-                "Autan liquid",
-                "Autan liquid"
-            )
-        )
-    }
+    var showEditKasirDialog by remember { mutableStateOf(false) }
+    var selectedKasir by remember { mutableStateOf<KasirEntity?>(null) }
+
+    val kasirList by viewModel.kasirList.collectAsState()
 
     Scaffold(
         topBar = {
@@ -93,7 +94,7 @@ fun DaftarKasir(navController: NavController) {
                             )
                     ) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = Color.Black
                         )
@@ -139,12 +140,13 @@ fun DaftarKasir(navController: NavController) {
         ) {
             items(kasirList.size) { index ->
                 KasirCard(
-                    namaKasir = kasirList[index],
-                    onEdit = { /* Handle edit */ },
+                    kasir = kasirList[index],
+                    onEdit = {
+                        selectedKasir = kasirList[index]
+                        showEditKasirDialog = true
+                    },
                     onDelete = {
-                        kasirList = kasirList.toMutableList().apply {
-                            removeAt(index)
-                        }
+                        viewModel.deleteKasir(kasirList[index])
                     }
                 )
             }
@@ -156,10 +158,24 @@ fun DaftarKasir(navController: NavController) {
         TambahKasirDialog(
             onDismiss = { showTambahKasirDialog = false },
             onSave = { namaKasir ->
-                kasirList = kasirList.toMutableList().apply {
-                    add(namaKasir)
-                }
+                viewModel.addKasir(namaKasir)
                 showTambahKasirDialog = false
+            }
+        )
+    }
+
+    // Dialog Edit Kasir
+    if (showEditKasirDialog && selectedKasir != null) {
+        EditKasirDialog(
+            namaKasirAwal = selectedKasir!!.namaKasir,
+            onDismiss = {
+                showEditKasirDialog = false
+                selectedKasir = null
+            },
+            onSave = { namaKasir ->
+                viewModel.updateKasir(selectedKasir!!.id, namaKasir)
+                showEditKasirDialog = false
+                selectedKasir = null
             }
         )
     }
@@ -167,7 +183,7 @@ fun DaftarKasir(navController: NavController) {
 
 @Composable
 fun KasirCard(
-    namaKasir: String,
+    kasir: KasirEntity,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -186,7 +202,7 @@ fun KasirCard(
         ) {
             // Nama Kasir
             Text(
-                text = namaKasir,
+                text = kasir.namaKasir,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium,
                 color = Color.Black,
@@ -227,8 +243,6 @@ fun KasirCard(
         }
     }
 }
-
-
 
 @Preview(showBackground = true)
 @Composable
