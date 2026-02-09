@@ -21,6 +21,7 @@ import com.example.ngasiryuk.domain.usecase.UpdateTokoUseCase
 import com.example.ngasiryuk.screen.menu.daftarkasir.DaftarKasirViewModel
 import com.example.ngasiryuk.screen.menu.daftartoko.DaftarTokoViewModel
 import com.example.ngasiryuk.screen.menu.dashboard.DashboardViewModel
+import com.example.ngasiryuk.screen.menu.kasir.KasirViewModel
 import com.example.ngasiryuk.screen.menu.kategori.ListKategoriViewModel
 import com.example.ngasiryuk.screen.menu.kelolaproduk.KelolaProdukViewModel
 import com.example.ngasiryuk.screen.menu.listcustomer.ListCustomerViewModel
@@ -106,6 +107,14 @@ object AppContainer {
     fun provideListCustomerViewModel(): ListCustomerViewModel {
         return ListCustomerViewModel(
             customerRepository = customerRepository
+        )
+    }
+
+    fun provideKasirViewModel(): KasirViewModel {
+        return KasirViewModel(
+            kasirRepository = kasirRepository,
+            customerRepository = customerRepository,
+            produkRepository = produkRepository
         )
     }
 }

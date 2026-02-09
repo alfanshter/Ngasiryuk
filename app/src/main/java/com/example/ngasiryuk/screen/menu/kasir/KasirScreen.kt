@@ -19,8 +19,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
@@ -43,6 +43,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,32 +59,45 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.galonqu.commond.plusjakarta
 import com.example.ngasiryuk.R
+import com.example.ngasiryuk.di.AppContainer
 import com.example.ngasiryuk.screen.component.dialog.TambahCustomerDialog
-import com.example.ngasiryuk.screen.component.dialog.TambahKeKeranjangDialog
+import com.example.ngasiryuk.screen.component.dialog.TambahKasirDialog
+import com.example.ngasiryuk.screen.component.dialog.TambahProdukKeKeranjangDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun KasirScreen(navController: NavController) {
-    var pelanggan by remember { mutableStateOf("Muhib Goat") }
+fun KasirScreen(
+    navController: NavController,
+    viewModel: KasirViewModel = viewModel(factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+            @Suppress("UNCHECKED_CAST")
+            return AppContainer.provideKasirViewModel() as T
+        }
+    })
+) {
+    // State dari ViewModel
+    val kasirList by viewModel.kasirList.collectAsState()
+    val customerList by viewModel.customerList.collectAsState()
+    val produkList by viewModel.produkList.collectAsState()
+    val selectedKasir by viewModel.selectedKasir.collectAsState()
+    val selectedCustomer by viewModel.selectedCustomer.collectAsState()
+    val keranjangItems by viewModel.keranjangItems.collectAsState()
+    val totalTransaksi by viewModel.totalTransaksi.collectAsState()
+
+    // Local state for UI
+    var expandedKasir by remember { mutableStateOf(false) }
     var expandedPelanggan by remember { mutableStateOf(false) }
     var showTambahCustomerDialog by remember { mutableStateOf(false) }
+    var showTambahKasirDialog by remember { mutableStateOf(false) }
     var showTambahKeranjangDialog by remember { mutableStateOf(false) }
+    var showQRScanner by remember { mutableStateOf(false) }
     var showPembayaranBottomSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    var keranjangItems by remember {
-        mutableStateOf(
-            mutableListOf(
-                KeranjangItem("Autan liquid", "889029900", 3000, 2)
-            )
-        )
-    }
-
-    val totalTransaksi = keranjangItems.sumOf { it.harga * it.jumlah }
 
     Scaffold(
         topBar = {
@@ -113,7 +127,7 @@ fun KasirScreen(navController: NavController) {
                             )
                     ) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = Color.Black
                         )
@@ -140,7 +154,7 @@ fun KasirScreen(navController: NavController) {
                 .padding(paddingValues)
                 .background(Color(0xFFF5F5F5))
         ) {
-            // Card Container (kode yang sama seperti sebelumnya...)
+            // Card Container dengan LazyColumn
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -150,357 +164,392 @@ fun KasirScreen(navController: NavController) {
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 elevation = CardDefaults.cardElevation(4.dp)
             ) {
-                Column(
+                androidx.compose.foundation.lazy.LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(20.dp)
                 ) {
-                    // ... (semua kode sebelumnya tetap sama)
-                    // Label Kasir
-                    Text(
-                        text = "Kasir",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color.Gray,
-                        fontFamily = plusjakarta,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-
-                    // Dropdown Kasir
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        ExposedDropdownMenuBox(
-                            expanded = expandedPelanggan,
-                            onExpandedChange = { expandedPelanggan = it },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            OutlinedTextField(
-                                value = pelanggan,
-                                onValueChange = {},
-                                readOnly = true,
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Default.Person,
-                                        contentDescription = "Person",
-                                        tint = Color.Gray
-                                    )
-                                },
-                                trailingIcon = {
-                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedPelanggan)
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .menuAnchor(),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    unfocusedBorderColor = Color(0xFFE0E0E0),
-                                    focusedBorderColor = Color(0xFFFDB913),
-                                    unfocusedContainerColor = Color(0xFFF5F5F5),
-                                    focusedContainerColor = Color(0xFFF5F5F5)
-                                )
-                            )
-                            ExposedDropdownMenu(
-                                expanded = expandedPelanggan,
-                                onDismissRequest = { expandedPelanggan = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Muhib Goat") },
-                                    onClick = {
-                                        pelanggan = "Muhib Goat"
-                                        expandedPelanggan = false
-                                    }
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        // Tombol Tambah Pelanggan
-                        IconButton(
-                            onClick = { showTambahCustomerDialog = true },
-                            modifier = Modifier
-                                .size(56.dp)
-                                .background(
-                                    color = Color(0xFFFDB913),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Add",
-                                tint = Color.White
-                            )
-                        }
-                    }
-
-                    // Label Pelanggan
-                    Text(
-                        text = "Pelanggan",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color.Gray,
-                        fontFamily = plusjakarta,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-
-                    // Dropdown Pelanggan
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 20.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        ExposedDropdownMenuBox(
-                            expanded = expandedPelanggan,
-                            onExpandedChange = { expandedPelanggan = it },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            OutlinedTextField(
-                                value = pelanggan,
-                                onValueChange = {},
-                                readOnly = true,
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Default.Person,
-                                        contentDescription = "Person",
-                                        tint = Color.Gray
-                                    )
-                                },
-                                trailingIcon = {
-                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedPelanggan)
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .menuAnchor(),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    unfocusedBorderColor = Color(0xFFE0E0E0),
-                                    focusedBorderColor = Color(0xFFFDB913),
-                                    unfocusedContainerColor = Color(0xFFF5F5F5),
-                                    focusedContainerColor = Color(0xFFF5F5F5)
-                                )
-                            )
-                            ExposedDropdownMenu(
-                                expanded = expandedPelanggan,
-                                onDismissRequest = { expandedPelanggan = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Muhib Goat") },
-                                    onClick = {
-                                        pelanggan = "Muhib Goat"
-                                        expandedPelanggan = false
-                                    }
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        // Tombol Tambah Pelanggan
-                        IconButton(
-                            onClick = { showTambahCustomerDialog = true },
-                            modifier = Modifier
-                                .size(56.dp)
-                                .background(
-                                    color = Color(0xFFFDB913),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Add",
-                                tint = Color.White
-                            )
-                        }
-                    }
-
-                    // Total Transaksi
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "Total Transaksi",
-                                fontSize = 14.sp,
-                                color = Color.Gray,
-                                fontFamily = plusjakarta
-                            )
-                            Text(
-                                text = "Rp ${"%,d".format(totalTransaksi)}",
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF01A14E),
-                                fontFamily = plusjakarta
-                            )
-                        }
-
-                        // Tombol Reset
-                        IconButton(
-                            onClick = {
-                                keranjangItems.clear()
-                            },
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(
-                                    color = Color(0xFFFFEBEE),
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "Reset",
-                                tint = Color(0xFFFF5252),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-
-                    // Tombol Scan Produk
-                    Button(
-                        onClick = { /* Handle scan */ },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFFDB913)
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.qrcode),
-                            contentDescription = "Scan",
-                            tint = Color.Black
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
+                    item {
+                        // Label Kasir
                         Text(
-                            text = "Scan Produk",
-                            color = Color.Black,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = plusjakarta,
-                            fontSize = 16.sp
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Tombol Tambah Keranjang
-                    OutlinedButton(
-                        onClick = { showTambahKeranjangDialog = true },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, Color(0xFFE0E0E0)),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = Color(0xFFF5F5F5)
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Add",
-                            tint = Color.Gray
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Tambah Keranjang",
-                            color = Color.Gray,
-                            fontWeight = FontWeight.Medium,
-                            fontFamily = plusjakarta,
-                            fontSize = 16.sp
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    // Header Keranjang
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Keranjang",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black,
-                            fontFamily = plusjakarta
-                        )
-                        Text(
-                            text = "${keranjangItems.size} Item",
+                            text = "Kasir",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
-                            color = Color(0xFFFDB913),
-                            fontFamily = plusjakarta
+                            color = Color.Gray,
+                            fontFamily = plusjakarta,
+                            modifier = Modifier.padding(bottom = 8.dp)
                         )
                     }
 
-                    // Divider
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(1.dp)
-                            .background(Color(0xFFE0E0E0))
-                    )
+                    item {
+                        // Dropdown Kasir
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            ExposedDropdownMenuBox(
+                                expanded = expandedKasir,
+                                onExpandedChange = { expandedKasir = it },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                OutlinedTextField(
+                                    value = selectedKasir?.namaKasir ?: "Pilih Kasir",
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Person,
+                                            contentDescription = "Person",
+                                            tint = Color.Gray
+                                        )
+                                    },
+                                    trailingIcon = {
+                                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedKasir)
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .menuAnchor(),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        unfocusedBorderColor = Color(0xFFE0E0E0),
+                                        focusedBorderColor = Color(0xFFFDB913),
+                                        unfocusedContainerColor = Color(0xFFF5F5F5),
+                                        focusedContainerColor = Color(0xFFF5F5F5)
+                                    )
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = expandedKasir,
+                                    onDismissRequest = { expandedKasir = false }
+                                ) {
+                                    kasirList.forEach { kasir ->
+                                        DropdownMenuItem(
+                                            text = { Text(kasir.namaKasir) },
+                                            onClick = {
+                                                viewModel.selectKasir(kasir)
+                                                expandedKasir = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
 
-                    // List Keranjang
-                    keranjangItems.forEachIndexed { index, item ->
+                            // Tombol Tambah Kasir
+                            IconButton(
+                                onClick = { showTambahKasirDialog = true },
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .background(
+                                        color = Color(0xFFFDB913),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Add",
+                                    tint = Color.White
+                                )
+                            }
+                        }
+                    }
+
+                    item {
+                        // Label Pelanggan
+                        Text(
+                            text = "Pelanggan",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.Gray,
+                            fontFamily = plusjakarta,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+
+                    item {
+                        // Dropdown Pelanggan
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 20.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            ExposedDropdownMenuBox(
+                                expanded = expandedPelanggan,
+                                onExpandedChange = { expandedPelanggan = it },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                OutlinedTextField(
+                                    value = selectedCustomer?.nama ?: "Pilih Pelanggan (Opsional)",
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Person,
+                                            contentDescription = "Person",
+                                            tint = Color.Gray
+                                        )
+                                    },
+                                    trailingIcon = {
+                                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedPelanggan)
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .menuAnchor(),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        unfocusedBorderColor = Color(0xFFE0E0E0),
+                                        focusedBorderColor = Color(0xFFFDB913),
+                                        unfocusedContainerColor = Color(0xFFF5F5F5),
+                                        focusedContainerColor = Color(0xFFF5F5F5)
+                                    )
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = expandedPelanggan,
+                                    onDismissRequest = { expandedPelanggan = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Tanpa Pelanggan") },
+                                        onClick = {
+                                            viewModel.selectCustomer(null)
+                                            expandedPelanggan = false
+                                        }
+                                    )
+                                    customerList.forEach { customer ->
+                                        DropdownMenuItem(
+                                            text = { Text(customer.nama) },
+                                            onClick = {
+                                                viewModel.selectCustomer(customer)
+                                                expandedPelanggan = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            IconButton(
+                                onClick = { showTambahCustomerDialog = true },
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .background(
+                                        color = Color(0xFFFDB913),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Add",
+                                    tint = Color.White
+                                )
+                            }
+                        }
+                    }
+
+                    item {
+                        // Total Transaksi
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Total Transaksi",
+                                    fontSize = 14.sp,
+                                    color = Color.Gray,
+                                    fontFamily = plusjakarta
+                                )
+                                Text(
+                                    text = "Rp ${"%,d".format(totalTransaksi)}",
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF01A14E),
+                                    fontFamily = plusjakarta
+                                )
+                            }
+
+                            IconButton(
+                                onClick = {
+                                    viewModel.clearKeranjang()
+                                },
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(
+                                        color = Color(0xFFFFEBEE),
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Reset",
+                                    tint = Color(0xFFFF5252),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    item {
+                        // Tombol Scan Produk
+                        Button(
+                            onClick = { showQRScanner = true },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFFDB913)
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.qrcode),
+                                contentDescription = "Scan",
+                                tint = Color.Black
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Scan Produk",
+                                color = Color.Black,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = plusjakarta,
+                                fontSize = 16.sp
+                            )
+                        }
+                    }
+
+                    item {
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+
+                    item {
+                        // Tombol Tambah Keranjang
+                        OutlinedButton(
+                            onClick = { showTambahKeranjangDialog = true },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, Color(0xFFE0E0E0)),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = Color(0xFFF5F5F5)
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Add",
+                                tint = Color.Gray
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Tambah Keranjang",
+                                color = Color.Gray,
+                                fontWeight = FontWeight.Medium,
+                                fontFamily = plusjakarta,
+                                fontSize = 16.sp
+                            )
+                        }
+                    }
+
+                    item {
+                        Spacer(modifier = Modifier.height(20.dp))
+                    }
+
+                    item {
+                        // Header Keranjang
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Keranjang",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black,
+                                fontFamily = plusjakarta
+                            )
+                            Text(
+                                text = "${keranjangItems.size} Item",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFFFDB913),
+                                fontFamily = plusjakarta
+                            )
+                        }
+                    }
+
+                    item {
+                        // Divider
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(1.dp)
+                                .background(Color(0xFFE0E0E0))
+                        )
+                    }
+
+                    item {
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+
+                    // List Keranjang Items
+                    items(keranjangItems.size) { index ->
+                        val item = keranjangItems[index]
                         KeranjangItemCard(
                             item = item,
                             onEdit = { /* Handle edit */ },
                             onPlus = {
-                                val updatedList = keranjangItems.toMutableList()
-                                updatedList[index] = item.copy(jumlah = item.jumlah + 1)
-                                keranjangItems = updatedList
+                                viewModel.updateKeranjangItemJumlah(index, item.jumlah + 1)
                             },
                             onMinus = {
                                 if (item.jumlah > 1) {
-                                    val updatedList = keranjangItems.toMutableList()
-                                    updatedList[index] = item.copy(jumlah = item.jumlah - 1)
-                                    keranjangItems = updatedList
+                                    viewModel.updateKeranjangItemJumlah(index, item.jumlah - 1)
                                 }
                             }
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                     }
 
-                    // Tombol Bayar - UBAH BAGIAN INI
-                    Button(
-                        onClick = { showPembayaranBottomSheet = true },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF4CAF50)
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.bayar),
-                            contentDescription = "Payment",
-                            tint = Color.White
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "BAYAR",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = plusjakarta,
-                            fontSize = 18.sp
-                        )
+                    item {
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
+                    item {
+                        // Tombol Bayar
+                        Button(
+                            onClick = { showPembayaranBottomSheet = true },
+                            modifier = Modifier
+                                .fillMaxWidth().padding(bottom = 35.dp)
+                                .height(56.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF4CAF50)
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.bayar),
+                                contentDescription = "Payment",
+                                tint = Color.White
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "BAYAR",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = plusjakarta,
+                                fontSize = 18.sp
+                            )
+                        }
                     }
                 }
             }
@@ -512,21 +561,49 @@ fun KasirScreen(navController: NavController) {
         TambahCustomerDialog(
             onDismiss = { showTambahCustomerDialog = false },
             onSave = { nama, nomerWa, alamat ->
+                viewModel.addCustomer(nama, nomerWa, alamat)
                 showTambahCustomerDialog = false
+            }
+        )
+    }
+
+    // Dialog Tambah Kasir
+    if (showTambahKasirDialog) {
+        TambahKasirDialog(
+            onDismiss = { showTambahKasirDialog = false },
+            onSave = { namaKasir ->
+                viewModel.addKasir(namaKasir)
+                showTambahKasirDialog = false
             }
         )
     }
 
     // Dialog Tambah Ke Keranjang
     if (showTambahKeranjangDialog) {
-        TambahKeKeranjangDialog(
+        TambahProdukKeKeranjangDialog(
+            produkList = produkList,
             onDismiss = { showTambahKeranjangDialog = false },
-            onSave = { namaBarang, jumlah ->
-                keranjangItems.add(
-                    KeranjangItem(namaBarang, "889029900", 3000, jumlah)
-                )
+            onSave = { produk, jumlah ->
+                viewModel.addToKeranjang(produk, jumlah)
                 showTambahKeranjangDialog = false
             }
+        )
+    }
+
+    // QR Scanner Screen
+    if (showQRScanner) {
+        QRScannerScreen(
+            onBarcodeScanned = { barcode ->
+                showQRScanner = false
+                val produk = viewModel.getProdukByBarcode(barcode)
+                if (produk != null) {
+                    viewModel.addToKeranjang(produk, 1)
+                    // TODO: Bisa tambahkan snackbar/toast untuk notifikasi sukses
+                } else {
+                    // TODO: Bisa tambahkan snackbar/toast untuk notifikasi produk tidak ditemukan
+                }
+            },
+            onDismiss = { showQRScanner = false }
         )
     }
 
@@ -912,13 +989,6 @@ fun PembayaranBottomSheetContent(
 
 
 
-// Data class untuk item keranjang
-data class KeranjangItem(
-    val nama: String,
-    val sku: String,
-    val harga: Int,
-    val jumlah: Int
-)
 
 @Composable
 fun KeranjangItemCard(
@@ -987,18 +1057,6 @@ fun KeranjangItemCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Edit Icon
-                IconButton(
-                    onClick = onEdit,
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Edit",
-                        tint = Color.Gray,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
 
                 // Quantity Controls
                 Row(
