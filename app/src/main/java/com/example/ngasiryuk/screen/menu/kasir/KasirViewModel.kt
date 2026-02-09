@@ -3,11 +3,14 @@ package com.example.ngasiryuk.screen.menu.kasir
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ngasiryuk.data.local.entity.CustomerEntity
+import com.example.ngasiryuk.data.local.entity.DetailTransaksiEntity
 import com.example.ngasiryuk.data.local.entity.KasirEntity
 import com.example.ngasiryuk.data.local.entity.ProdukEntity
+import com.example.ngasiryuk.data.local.entity.TransaksiEntity
 import com.example.ngasiryuk.data.repository.CustomerRepository
 import com.example.ngasiryuk.data.repository.KasirRepository
 import com.example.ngasiryuk.data.repository.ProdukRepository
+import com.example.ngasiryuk.data.repository.TransaksiRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +22,8 @@ import kotlinx.coroutines.launch
 class KasirViewModel(
     private val kasirRepository: KasirRepository,
     private val customerRepository: CustomerRepository,
-    private val produkRepository: ProdukRepository
+    private val produkRepository: ProdukRepository,
+    private val transaksiRepository: TransaksiRepository
 ) : ViewModel() {
 
     private val _kasirList = MutableStateFlow<List<KasirEntity>>(emptyList())
@@ -54,6 +58,9 @@ class KasirViewModel(
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
+    private val _successMessage = MutableStateFlow<String?>(null)
+    val successMessage: StateFlow<String?> = _successMessage.asStateFlow()
 
     init {
         loadData()
@@ -163,6 +170,88 @@ class KasirViewModel(
 
     fun clearError() {
         _errorMessage.value = null
+    }
+
+    fun clearSuccess() {
+        _successMessage.value = null
+    }
+
+    suspend fun simpanTransaksi(
+        diskon: Int,
+        uangDibayarkan: Int,
+        metodePembayaran: String,
+        keterangan: String?
+    ): Boolean {
+        return try {
+            // Validasi
+            if (_selectedKasir.value == null) {
+                _errorMessage.value = "Pilih kasir terlebih dahulu"
+                return false
+            }
+
+            if (_keranjangItems.value.isEmpty()) {
+                _errorMessage.value = "Keranjang masih kosong"
+                return false
+            }
+
+            val totalBelanja = totalTransaksi.value
+            val totalSetelahDiskon = totalBelanja - (totalBelanja * diskon / 100)
+
+            if (uangDibayarkan < totalSetelahDiskon) {
+                _errorMessage.value = "Uang yang dibayarkan kurang"
+                return false
+            }
+
+            val kembalian = uangDibayarkan - totalSetelahDiskon
+
+            // Buat transaksi entity
+            val transaksi = TransaksiEntity(
+                kasirId = _selectedKasir.value!!.id,
+                namaKasir = _selectedKasir.value!!.namaKasir,
+                customerId = _selectedCustomer.value?.id,
+                namaCustomer = _selectedCustomer.value?.nama,
+                totalBelanja = totalBelanja,
+                diskon = diskon,
+                totalSetelahDiskon = totalSetelahDiskon,
+                uangDibayarkan = uangDibayarkan,
+                kembalian = kembalian,
+                metodePembayaran = metodePembayaran,
+                keterangan = keterangan
+            )
+
+            // Buat detail transaksi
+            val details = _keranjangItems.value.map { item ->
+                val produk = produkRepository.getProdukById(item.produkId)
+                val hargaBeli = produk?.hargaBeli?.toInt() ?: 0
+                val subtotal = item.harga * item.jumlah
+                val labaBersih = (item.harga - hargaBeli) * item.jumlah
+
+                DetailTransaksiEntity(
+                    transaksiId = 0, // akan di-update di repository
+                    produkId = item.produkId,
+                    namaProduk = item.nama,
+                    sku = item.sku,
+                    hargaBeli = hargaBeli,
+                    hargaJual = item.harga,
+                    jumlah = item.jumlah,
+                    subtotal = subtotal,
+                    labaBersih = labaBersih
+                )
+            }
+
+            // Simpan transaksi dengan details
+            transaksiRepository.insertTransaksiWithDetails(transaksi, details)
+
+            // Clear keranjang dan reset state
+            clearKeranjang()
+            _selectedCustomer.value = null
+            _successMessage.value = "Pembelian berhasil disimpan"
+
+            true
+        } catch (e: Exception) {
+            _errorMessage.value = "Error menyimpan transaksi: ${e.message}"
+            false
+        }
     }
 
     fun addCustomer(nama: String, nomorWa: String, alamat: String) {

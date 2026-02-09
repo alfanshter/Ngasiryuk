@@ -43,6 +43,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -68,6 +69,7 @@ import com.example.ngasiryuk.di.AppContainer
 import com.example.ngasiryuk.screen.component.dialog.TambahCustomerDialog
 import com.example.ngasiryuk.screen.component.dialog.TambahKasirDialog
 import com.example.ngasiryuk.screen.component.dialog.TambahProdukKeKeranjangDialog
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,6 +90,27 @@ fun KasirScreen(
     val selectedCustomer by viewModel.selectedCustomer.collectAsState()
     val keranjangItems by viewModel.keranjangItems.collectAsState()
     val totalTransaksi by viewModel.totalTransaksi.collectAsState()
+    val successMessage by viewModel.successMessage.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+
+    // Context untuk Toast
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    // Handle success message dengan Toast
+    LaunchedEffect(successMessage) {
+        successMessage?.let { message ->
+            android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
+            viewModel.clearSuccess()
+        }
+    }
+
+    // Handle error message dengan Toast
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { message ->
+            android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
+            viewModel.clearError()
+        }
+    }
 
     // Local state for UI
     var expandedKasir by remember { mutableStateOf(false) }
@@ -635,9 +658,19 @@ fun KasirScreen(
             PembayaranBottomSheetContent(
                 totalTagihan = totalTransaksi,
                 onDismiss = { showPembayaranBottomSheet = false },
-                onSimpan = {
+                onSimpan = { diskon, uangDibayarkan, metodePembayaran, keterangan ->
                     // Handle simpan pembayaran
-                    showPembayaranBottomSheet = false
+                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                        val success = viewModel.simpanTransaksi(
+                            diskon = diskon,
+                            uangDibayarkan = uangDibayarkan,
+                            metodePembayaran = metodePembayaran,
+                            keterangan = keterangan
+                        )
+                        if (success) {
+                            showPembayaranBottomSheet = false
+                        }
+                    }
                 }
             )
         }
@@ -649,7 +682,7 @@ fun KasirScreen(
 fun PembayaranBottomSheetContent(
     totalTagihan: Int,
     onDismiss: () -> Unit,
-    onSimpan: () -> Unit
+    onSimpan: (diskon: Int, uangDibayarkan: Int, metodePembayaran: String, keterangan: String?) -> Unit
 ) {
     var diskon by remember { mutableStateOf("") }
     var uangDibayarkan by remember { mutableStateOf("") }
@@ -966,14 +999,22 @@ fun PembayaranBottomSheetContent(
 
             // Simpan Button
             Button(
-                onClick = onSimpan,
+                onClick = {
+                    onSimpan(
+                        diskonValue,
+                        uangDibayarkanValue,
+                        metodePembayaran,
+                        keterangan.ifBlank { null }
+                    )
+                },
                 modifier = Modifier
                     .weight(1f)
                     .height(50.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFFFDB913)
                 ),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                enabled = uangDibayarkanValue >= totalSetelahDiskon
             ) {
                 Text(
                     text = "Simpan",

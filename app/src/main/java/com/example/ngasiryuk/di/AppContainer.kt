@@ -13,6 +13,8 @@ import com.example.ngasiryuk.data.repository.ProdukRepository
 import com.example.ngasiryuk.data.repository.ProdukRepositoryImpl
 import com.example.ngasiryuk.data.repository.RiwayatStokRepository
 import com.example.ngasiryuk.data.repository.RiwayatStokRepositoryImpl
+import com.example.ngasiryuk.data.repository.TransaksiRepository
+import com.example.ngasiryuk.data.repository.TransaksiRepositoryImpl
 import com.example.ngasiryuk.domain.repository.TokoRepository
 import com.example.ngasiryuk.domain.usecase.CheckTokoExistsUseCase
 import com.example.ngasiryuk.domain.usecase.GetTokoUseCase
@@ -26,6 +28,7 @@ import com.example.ngasiryuk.screen.menu.kategori.ListKategoriViewModel
 import com.example.ngasiryuk.screen.menu.kelolaproduk.KelolaProdukViewModel
 import com.example.ngasiryuk.screen.menu.listcustomer.ListCustomerViewModel
 import com.example.ngasiryuk.screen.menu.manajemenstok.ManajemenStokViewModel
+import com.example.ngasiryuk.screen.menu.rekappenjualan.RekapPenjualanViewModel
 
 object AppContainer {
 
@@ -36,6 +39,7 @@ object AppContainer {
     private lateinit var riwayatStokRepository: RiwayatStokRepository
     private lateinit var kasirRepository: KasirRepository
     private lateinit var customerRepository: CustomerRepository
+    private lateinit var transaksiRepository: TransaksiRepository
 
     fun initialize(context: Context) {
         database = AppDatabase.getDatabase(context)
@@ -45,6 +49,11 @@ object AppContainer {
         riwayatStokRepository = RiwayatStokRepositoryImpl(database.riwayatStokDao())
         kasirRepository = KasirRepositoryImpl(database.kasirDao())
         customerRepository = CustomerRepositoryImpl(database.customerDao())
+        transaksiRepository = TransaksiRepositoryImpl(
+            database.transaksiDao(),
+            database.detailTransaksiDao(),
+            database.produkDao()
+        )
     }
 
     fun provideGetTokoUseCase(): GetTokoUseCase {
@@ -114,10 +123,14 @@ object AppContainer {
         return KasirViewModel(
             kasirRepository = kasirRepository,
             customerRepository = customerRepository,
-            produkRepository = produkRepository
+            produkRepository = produkRepository,
+            transaksiRepository = transaksiRepository
+        )
+    }
+
+    fun provideRekapPenjualanViewModel(): RekapPenjualanViewModel {
+        return RekapPenjualanViewModel(
+            transaksiRepository = transaksiRepository
         )
     }
 }
-
-
-

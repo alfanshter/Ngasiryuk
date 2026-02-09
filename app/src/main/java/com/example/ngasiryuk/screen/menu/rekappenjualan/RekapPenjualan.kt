@@ -20,7 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -28,7 +28,6 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -39,6 +38,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,28 +52,48 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.galonqu.commond.plusjakarta
 import com.example.ngasiryuk.R
+import com.example.ngasiryuk.di.AppContainer
 import java.util.Calendar
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RekapPenjualan(navController: NavController) {
-    var selectedDate by remember { mutableStateOf("12-09-2026") }
+fun RekapPenjualan(
+    navController: NavController,
+    viewModel: RekapPenjualanViewModel = viewModel(factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+            @Suppress("UNCHECKED_CAST")
+            return AppContainer.provideRekapPenjualanViewModel() as T
+        }
+    })
+) {
+    // State dari ViewModel
+    val selectedDateCalendar by viewModel.selectedDate.collectAsState()
+    val transaksiList by viewModel.transaksiList.collectAsState()
+    val pemasukan by viewModel.totalPemasukan.collectAsState()
+    val pengeluaran by viewModel.totalPengeluaran.collectAsState()
+    val totalLabaBersih by viewModel.totalLabaBersih.collectAsState()
+    val pertumbuhanPersen by viewModel.pertumbuhanPersen.collectAsState()
+    val jumlahTransaksi by viewModel.jumlahTransaksi.collectAsState()
+
+    // Format tanggal untuk tampilan
+    var selectedDate by remember {
+        mutableStateOf(
+            String.format(
+                Locale.getDefault(),
+                "%02d-%02d-%04d",
+                selectedDateCalendar.get(Calendar.DAY_OF_MONTH),
+                selectedDateCalendar.get(Calendar.MONTH) + 1,
+                selectedDateCalendar.get(Calendar.YEAR)
+            )
+        )
+    }
     var showDatePicker by remember { mutableStateOf(false) }
-
-    val pemasukan = 120000
-    val pengeluaran = 120000
-    val totalLabaBersih = 300000
-    val pertumbuhanPersen = 12
-
-    val daftarPenjualan = listOf(
-        PenjualanItem("Autan liquid", 3000, true),
-        PenjualanItem("Autan liquid", 3000, true),
-        PenjualanItem("Autan liquid", 3000, true)
-    )
 
     Scaffold(
         topBar = {
@@ -97,7 +117,7 @@ fun RekapPenjualan(navController: NavController) {
                     ) {
                         // Tombol Back Bulat
                         IconButton(
-                            onClick = {navController.popBackStack() },
+                            onClick = { navController.popBackStack() },
                             modifier = Modifier
                                 .size(48.dp)
                                 .background(
@@ -106,7 +126,7 @@ fun RekapPenjualan(navController: NavController) {
                                 )
                         ) {
                             Icon(
-                                imageVector = Icons.Default.ArrowBack,
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
                                 tint = Color.Black
                             )
@@ -331,7 +351,7 @@ fun RekapPenjualan(navController: NavController) {
                         fontFamily = plusjakarta
                     )
                     Text(
-                        text = "${daftarPenjualan.size} Transaksi",
+                        text = "$jumlahTransaksi Transaksi",
                         fontSize = 14.sp,
                         color = Color.Gray,
                         fontFamily = plusjakarta
@@ -374,9 +394,9 @@ fun RekapPenjualan(navController: NavController) {
             }
 
             // List Penjualan
-            items(daftarPenjualan.size) { index ->
-                PenjualanCard(
-                    item = daftarPenjualan[index]
+            items(transaksiList.size) { index ->
+                TransaksiCard(
+                    transaksi = transaksiList[index]
                 )
                 Spacer(modifier = Modifier.height(12.dp))
             }
@@ -392,15 +412,17 @@ fun RekapPenjualan(navController: NavController) {
             confirmButton = {
                 TextButton(
                     onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
+                        datePickerState.selectedDateMillis?.let { millis: Long ->
                             val calendar = Calendar.getInstance()
                             calendar.timeInMillis = millis
                             selectedDate = String.format(
+                                Locale.getDefault(),
                                 "%02d-%02d-%04d",
                                 calendar.get(Calendar.DAY_OF_MONTH),
                                 calendar.get(Calendar.MONTH) + 1,
                                 calendar.get(Calendar.YEAR)
                             )
+                            viewModel.setSelectedDate(calendar)
                         }
                         showDatePicker = false
                     }
@@ -435,59 +457,194 @@ fun RekapPenjualan(navController: NavController) {
     }
 }
 
-// Data class untuk item penjualan
-data class PenjualanItem(
-    val nama: String,
-    val total: Int,
-    val terjual: Boolean
-)
-
 @Composable
-fun PenjualanCard(item: PenjualanItem) {
+fun TransaksiCard(transaksi: com.example.ngasiryuk.data.local.entity.TransaksiEntity) {
+    // Load detail produk dari transaksi
+    var detailList by remember { mutableStateOf<List<com.example.ngasiryuk.data.local.entity.DetailTransaksiEntity>>(emptyList()) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    LaunchedEffect(transaksi.id) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val dao = com.example.ngasiryuk.data.local.database.AppDatabase.getDatabase(context).detailTransaksiDao()
+            dao.getDetailByTransaksiId(transaksi.id).collect { details ->
+                detailList = details
+            }
+        }
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(16.dp)
         ) {
-            // Info Barang
-            Column {
+            // Header dengan metode pembayaran
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Kasir: ${transaksi.namaKasir}",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.Gray,
+                        fontFamily = plusjakarta
+                    )
+                    if (transaksi.namaCustomer != null) {
+                        Text(
+                            text = "Pelanggan: ${transaksi.namaCustomer}",
+                            fontSize = 11.sp,
+                            color = Color.Gray,
+                            fontFamily = plusjakarta
+                        )
+                    }
+                }
+
+                // Status Badge
+                Box(
+                    modifier = Modifier
+                        .background(
+                            color = Color(0xFFE8F5E9),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = transaksi.metodePembayaran,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF4CAF50),
+                        fontFamily = plusjakarta
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Garis pembatas
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(Color(0xFFE0E0E0))
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Daftar Produk
+            if (detailList.isNotEmpty()) {
                 Text(
-                    text = item.nama,
-                    fontSize = 16.sp,
+                    text = "Produk:",
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black,
                     fontFamily = plusjakarta
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Total = Rp ${"%,d".format(item.total)}",
-                    fontSize = 13.sp,
-                    color = Color.Gray,
-                    fontFamily = plusjakarta
-                )
+                Spacer(modifier = Modifier.height(6.dp))
+
+                detailList.take(3).forEach { detail ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 2.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "${detail.jumlah}x ",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.Black,
+                                fontFamily = plusjakarta
+                            )
+                            Text(
+                                text = detail.namaProduk,
+                                fontSize = 12.sp,
+                                color = Color.Black,
+                                fontFamily = plusjakarta,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Text(
+                            text = "Rp ${"%,d".format(detail.subtotal)}",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF4CAF50),
+                            fontFamily = plusjakarta
+                        )
+                    }
+                }
+
+                if (detailList.size > 3) {
+                    Text(
+                        text = "+${detailList.size - 3} produk lainnya",
+                        fontSize = 11.sp,
+                        color = Color.Gray,
+                        fontFamily = plusjakarta,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // Status Badge
+            // Info transaksi
+            if (transaksi.diskon > 0) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Diskon (${transaksi.diskon}%)",
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        fontFamily = plusjakarta
+                    )
+                    Text(
+                        text = "- Rp ${"%,d".format(transaksi.totalBelanja - transaksi.totalSetelahDiskon)}",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFFFF5252),
+                        fontFamily = plusjakarta
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+
+            // Garis pembatas
             Box(
                 modifier = Modifier
-                    .background(
-                        color = Color(0xFFE8F5E9),
-                        shape = RoundedCornerShape(8.dp)
-                    )
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(Color(0xFFE0E0E0))
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Total akhir
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Terjual",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
+                    text = "Total Dibayar",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    fontFamily = plusjakarta
+                )
+                Text(
+                    text = "Rp ${"%,d".format(transaksi.totalSetelahDiskon)}",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
                     color = Color(0xFF4CAF50),
                     fontFamily = plusjakarta
                 )
@@ -500,5 +657,5 @@ fun PenjualanCard(item: PenjualanItem) {
 @Composable
 private fun RekapPenjualanPreview() {
     RekapPenjualan(navController = rememberNavController())
-
 }
+
