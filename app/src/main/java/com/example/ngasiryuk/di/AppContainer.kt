@@ -2,6 +2,8 @@ package com.example.ngasiryuk.di
 
 import android.content.Context
 import com.example.ngasiryuk.data.local.database.AppDatabase
+import com.example.ngasiryuk.data.repository.CustomerRepository
+import com.example.ngasiryuk.data.repository.CustomerRepositoryImpl
 import com.example.ngasiryuk.data.repository.KasirRepository
 import com.example.ngasiryuk.data.repository.KasirRepositoryImpl
 import com.example.ngasiryuk.data.repository.KategoriRepositoryImpl
@@ -21,6 +23,7 @@ import com.example.ngasiryuk.screen.menu.daftartoko.DaftarTokoViewModel
 import com.example.ngasiryuk.screen.menu.dashboard.DashboardViewModel
 import com.example.ngasiryuk.screen.menu.kategori.ListKategoriViewModel
 import com.example.ngasiryuk.screen.menu.kelolaproduk.KelolaProdukViewModel
+import com.example.ngasiryuk.screen.menu.listcustomer.ListCustomerViewModel
 import com.example.ngasiryuk.screen.menu.manajemenstok.ManajemenStokViewModel
 
 object AppContainer {
@@ -31,6 +34,7 @@ object AppContainer {
     private lateinit var produkRepository: ProdukRepository
     private lateinit var riwayatStokRepository: RiwayatStokRepository
     private lateinit var kasirRepository: KasirRepository
+    private lateinit var customerRepository: CustomerRepository
 
     fun initialize(context: Context) {
         database = AppDatabase.getDatabase(context)
@@ -39,6 +43,7 @@ object AppContainer {
         produkRepository = ProdukRepositoryImpl(database.produkDao(), database.riwayatStokDao())
         riwayatStokRepository = RiwayatStokRepositoryImpl(database.riwayatStokDao())
         kasirRepository = KasirRepositoryImpl(database.kasirDao())
+        customerRepository = CustomerRepositoryImpl(database.customerDao())
     }
 
     fun provideGetTokoUseCase(): GetTokoUseCase {
@@ -95,6 +100,12 @@ object AppContainer {
     fun provideDaftarKasirViewModel(): DaftarKasirViewModel {
         return DaftarKasirViewModel(
             kasirRepository = kasirRepository
+        )
+    }
+
+    fun provideListCustomerViewModel(): ListCustomerViewModel {
+        return ListCustomerViewModel(
+            customerRepository = customerRepository
         )
     }
 }

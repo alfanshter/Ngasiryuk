@@ -3,6 +3,7 @@ package com.example.ngasiryuk.screen.menu
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -16,8 +17,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Card
@@ -28,6 +29,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,24 +42,31 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.galonqu.commond.plusjakarta
+import com.example.ngasiryuk.data.local.entity.CustomerEntity
+import com.example.ngasiryuk.di.AppContainer
+import com.example.ngasiryuk.screen.component.dialog.EditCustomerDialog
 import com.example.ngasiryuk.screen.component.dialog.TambahCustomerDialog
+import com.example.ngasiryuk.screen.menu.listcustomer.ListCustomerViewModel
 
 @Composable
-fun ListCustomer(navController: NavController) {
+fun ListCustomer(
+    navController: NavController,
+    viewModel: ListCustomerViewModel = viewModel(factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+            @Suppress("UNCHECKED_CAST")
+            return AppContainer.provideListCustomerViewModel() as T
+        }
+    })
+) {
     var showTambahCustomerDialog by remember { mutableStateOf(false) }
-    var customerList by remember {
-        mutableStateOf(
-            mutableListOf(
-                "Muhib Goat",
-                "Autan liquid",
-                "Autan liquid",
-                "Autan liquid"
-            )
-        )
-    }
+    var showEditCustomerDialog by remember { mutableStateOf(false) }
+    var selectedCustomer by remember { mutableStateOf<CustomerEntity?>(null) }
+
+    val customerList by viewModel.customerList.collectAsState()
 
     Scaffold(
         topBar = {
@@ -87,7 +96,7 @@ fun ListCustomer(navController: NavController) {
                             )
                     ) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = Color.Black
                         )
@@ -111,7 +120,7 @@ fun ListCustomer(navController: NavController) {
                 onClick = { showTambahCustomerDialog = true },
                 containerColor = Color(0xFFFDB913),
                 contentColor = Color.Black,
-                modifier = Modifier.size(56.dp)
+                modifier = Modifier.size(56.dp).padding(bottom = 35.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -133,12 +142,13 @@ fun ListCustomer(navController: NavController) {
         ) {
             items(customerList.size) { index ->
                 CustomerCard(
-                    namaCustomer = customerList[index],
-                    onEdit = { /* Handle edit */ },
+                    customer = customerList[index],
+                    onEdit = {
+                        selectedCustomer = customerList[index]
+                        showEditCustomerDialog = true
+                    },
                     onDelete = {
-                        customerList = customerList.toMutableList().apply {
-                            removeAt(index)
-                        }
+                        viewModel.deleteCustomer(customerList[index])
                     }
                 )
             }
@@ -150,10 +160,26 @@ fun ListCustomer(navController: NavController) {
         TambahCustomerDialog(
             onDismiss = { showTambahCustomerDialog = false },
             onSave = { nama, nomerWa, alamat ->
-                customerList = customerList.toMutableList().apply {
-                    add(nama)
-                }
+                viewModel.addCustomer(nama, nomerWa, alamat)
                 showTambahCustomerDialog = false
+            }
+        )
+    }
+
+    // Dialog Edit Customer
+    if (showEditCustomerDialog && selectedCustomer != null) {
+        EditCustomerDialog(
+            namaAwal = selectedCustomer!!.nama,
+            nomorWaAwal = selectedCustomer!!.nomorWa,
+            alamatAwal = selectedCustomer!!.alamat,
+            onDismiss = {
+                showEditCustomerDialog = false
+                selectedCustomer = null
+            },
+            onSave = { nama, nomerWa, alamat ->
+                viewModel.updateCustomer(selectedCustomer!!.id, nama, nomerWa, alamat)
+                showEditCustomerDialog = false
+                selectedCustomer = null
             }
         )
     }
@@ -161,7 +187,7 @@ fun ListCustomer(navController: NavController) {
 
 @Composable
 fun CustomerCard(
-    namaCustomer: String,
+    customer: CustomerEntity,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -178,15 +204,34 @@ fun CustomerCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Nama Customer
-            Text(
-                text = namaCustomer,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.Black,
-                fontFamily = plusjakarta,
+            // Customer Information
+            Column(
                 modifier = Modifier.weight(1f)
-            )
+            ) {
+                Text(
+                    text = customer.nama,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    fontFamily = plusjakarta
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = customer.nomorWa,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = Color.Gray,
+                    fontFamily = plusjakarta
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = customer.alamat,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = Color.Gray,
+                    fontFamily = plusjakarta
+                )
+            }
 
             // Action Buttons
             Row(
