@@ -121,7 +121,7 @@ fun ListKategoriScreen(navController: NavController) {
                 onClick = { showDialog = true },
                 containerColor = Color(0xFFFDB913),
                 contentColor = Color.Black,
-                modifier = Modifier.size(56.dp)
+                modifier = Modifier.size(56.dp).padding(bottom = 35.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,

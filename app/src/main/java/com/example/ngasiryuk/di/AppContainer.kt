@@ -18,6 +18,7 @@ import com.example.ngasiryuk.screen.menu.daftartoko.DaftarTokoViewModel
 import com.example.ngasiryuk.screen.menu.dashboard.DashboardViewModel
 import com.example.ngasiryuk.screen.menu.kategori.ListKategoriViewModel
 import com.example.ngasiryuk.screen.menu.kelolaproduk.KelolaProdukViewModel
+import com.example.ngasiryuk.screen.menu.manajemenstok.ManajemenStokViewModel
 
 object AppContainer {
 
@@ -76,6 +77,13 @@ object AppContainer {
             produkRepository = produkRepository,
             riwayatStokRepository = riwayatStokRepository,
             kategoriRepository = kategoriRepository
+        )
+    }
+
+    fun provideManajemenStokViewModel(): ManajemenStokViewModel {
+        return ManajemenStokViewModel(
+            produkRepository = produkRepository,
+            riwayatStokRepository = riwayatStokRepository
         )
     }
 }

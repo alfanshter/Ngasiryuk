@@ -1,5 +1,6 @@
 package com.example.ngasiryuk.screen.menu.manajemenstok
 
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -30,6 +32,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -37,6 +40,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -54,18 +59,43 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.galonqu.commond.plusjakarta
 import com.example.ngasiryuk.R
+import com.example.ngasiryuk.data.local.entity.ProdukEntity
+import com.example.ngasiryuk.data.local.entity.RiwayatStokEntity
+import com.example.ngasiryuk.di.AppContainer
+import com.example.ngasiryuk.utils.ExportUtils
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ManajemenStok(navController: NavController) {
+    val viewModel: ManajemenStokViewModel = viewModel(factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+            @Suppress("UNCHECKED_CAST")
+            return AppContainer.provideManajemenStokViewModel() as T
+        }
+    })
+
+    val context = LocalContext.current
     val pagerState = rememberPagerState(pageCount = { 3 })
     val scope = rememberCoroutineScope()
+
     var showDialog by remember { mutableStateOf(false) }
+    var selectedProduk by remember { mutableStateOf<ProdukEntity?>(null) }
+    var isAdding by remember { mutableStateOf(true) }
+
+    val produkList by viewModel.filteredProdukList.collectAsState()
+    val barangMasukList by viewModel.barangMasukList.collectAsState()
+    val barangKeluarList by viewModel.barangKeluarList.collectAsState()
+
+    var isExporting by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -229,9 +259,73 @@ fun ManajemenStok(navController: NavController) {
                 modifier = Modifier.fillMaxSize()
             ) { page ->
                 when (page) {
-                    0 -> StokPage(onAddClick = { showDialog = true })
-                    1 -> BarangMasukPage()
-                    2 -> BarangKeluarPage()
+                    0 -> StokPage(
+                        produkList = produkList,
+                        searchQuery = viewModel.searchQueryStok.collectAsState().value,
+                        onSearchQueryChange = { viewModel.updateSearchQueryStok(it) },
+                        onAddClick = { produk ->
+                            selectedProduk = produk
+                            isAdding = true
+                            showDialog = true
+                        },
+                        onMinusClick = { produk ->
+                            selectedProduk = produk
+                            isAdding = false
+                            showDialog = true
+                        },
+                        onExport = {
+                            scope.launch {
+                                isExporting = true
+                                try {
+                                    val file = ExportUtils.exportStokToExcel(context, produkList)
+                                    ExportUtils.shareFile(context, file)
+                                    Toast.makeText(context, "Export berhasil", Toast.LENGTH_SHORT).show()
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Export gagal: ${e.message}", Toast.LENGTH_SHORT).show()
+                                } finally {
+                                    isExporting = false
+                                }
+                            }
+                        }
+                    )
+                    1 -> BarangMasukPage(
+                        riwayatList = barangMasukList,
+                        searchQuery = viewModel.searchQueryMasuk.collectAsState().value,
+                        onSearchQueryChange = { viewModel.updateSearchQueryMasuk(it) },
+                        onExport = {
+                            scope.launch {
+                                isExporting = true
+                                try {
+                                    val file = ExportUtils.exportBarangMasukToExcel(context, barangMasukList)
+                                    ExportUtils.shareFile(context, file)
+                                    Toast.makeText(context, "Export berhasil", Toast.LENGTH_SHORT).show()
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Export gagal: ${e.message}", Toast.LENGTH_SHORT).show()
+                                } finally {
+                                    isExporting = false
+                                }
+                            }
+                        }
+                    )
+                    2 -> BarangKeluarPage(
+                        riwayatList = barangKeluarList,
+                        searchQuery = viewModel.searchQueryKeluar.collectAsState().value,
+                        onSearchQueryChange = { viewModel.updateSearchQueryKeluar(it) },
+                        onExport = {
+                            scope.launch {
+                                isExporting = true
+                                try {
+                                    val file = ExportUtils.exportBarangKeluarToExcel(context, barangKeluarList)
+                                    ExportUtils.shareFile(context, file)
+                                    Toast.makeText(context, "Export berhasil", Toast.LENGTH_SHORT).show()
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Export gagal: ${e.message}", Toast.LENGTH_SHORT).show()
+                                } finally {
+                                    isExporting = false
+                                }
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -240,18 +334,58 @@ fun ManajemenStok(navController: NavController) {
     // Dialog Tambah Stok
     if (showDialog) {
         TambahStokDialog(
-            onDismiss = { showDialog = false },
-            onSave = { jumlah ->
-                // Handle save
+            produk = selectedProduk,
+            isAdding = isAdding,
+            onDismiss = {
                 showDialog = false
+                selectedProduk = null
+            },
+            onSave = { jumlah, keterangan ->
+                selectedProduk?.let { produk ->
+                    if (isAdding) {
+                        viewModel.tambahStok(produk.id, jumlah, keterangan)
+                        Toast.makeText(context, "Stok berhasil ditambahkan", Toast.LENGTH_SHORT).show()
+                    } else {
+                        if (jumlah <= produk.stok) {
+                            viewModel.kurangiStok(produk.id, jumlah, keterangan)
+                            Toast.makeText(context, "Stok berhasil dikurangi", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "Jumlah melebihi stok tersedia", Toast.LENGTH_SHORT).show()
+                            return@let
+                        }
+                    }
+                }
+                showDialog = false
+                selectedProduk = null
             }
         )
+    }
+
+    // Loading indicator
+    if (isExporting) {
+        Dialog(onDismissRequest = {}) {
+            Box(
+                modifier = Modifier
+                    .size(100.dp)
+                    .background(Color.White, RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Color(0xFFFDB913))
+            }
+        }
     }
 }
 
 // Halaman 1: Stok
 @Composable
-fun StokPage(onAddClick: () -> Unit) {
+fun StokPage(
+    produkList: List<ProdukEntity>,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onAddClick: (ProdukEntity) -> Unit,
+    onMinusClick: (ProdukEntity) -> Unit,
+    onExport: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -259,7 +393,7 @@ fun StokPage(onAddClick: () -> Unit) {
     ) {
         // Tombol Export
         Button(
-            onClick = { /* Handle export */ },
+            onClick = onExport,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
@@ -288,8 +422,8 @@ fun StokPage(onAddClick: () -> Unit) {
 
         // Search Bar
         OutlinedTextField(
-            value = "",
-            onValueChange = {},
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
             placeholder = {
                 Text(
                     "Cari Riwayat",
@@ -320,17 +454,29 @@ fun StokPage(onAddClick: () -> Unit) {
         Spacer(modifier = Modifier.height(16.dp))
 
         // List Stok Barang
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(3) { index ->
-                StokBarangCard(
-                    namaBarang = "Galon 19Lt",
-                    sku = "889029900",
-                    kategori = "Galon",
-                    jumlah = 4,
-                    onAddClick = onAddClick
+        if (produkList.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Tidak ada produk",
+                    fontSize = 16.sp,
+                    color = Color.Gray,
+                    fontFamily = plusjakarta
                 )
+            }
+        } else {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(produkList) { produk ->
+                    StokBarangCard(
+                        produk = produk,
+                        onAddClick = { onAddClick(produk) },
+                        onMinusClick = { onMinusClick(produk) }
+                    )
+                }
             }
         }
     }
@@ -338,11 +484,9 @@ fun StokPage(onAddClick: () -> Unit) {
 
 @Composable
 fun StokBarangCard(
-    namaBarang: String,
-    sku: String,
-    kategori: String,
-    jumlah: Int,
-    onAddClick: () -> Unit
+    produk: ProdukEntity,
+    onAddClick: () -> Unit,
+    onMinusClick: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -362,7 +506,7 @@ fun StokBarangCard(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = namaBarang,
+                    text = produk.namaProduk,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black,
@@ -370,14 +514,14 @@ fun StokBarangCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "SKU : $sku",
+                    text = "SKU : ${produk.sku}",
                     fontSize = 12.sp,
                     color = Color.Gray,
                     fontFamily = plusjakarta
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "Kategori : $kategori",
+                    text = "Kategori : ${produk.kategoriNama}",
                     fontSize = 12.sp,
                     color = Color.Gray,
                     fontFamily = plusjakarta
@@ -391,25 +535,26 @@ fun StokBarangCard(
             ) {
                 // Minus Button
                 IconButton(
-                    onClick = { /* Handle minus */ },
+                    onClick = onMinusClick,
                     modifier = Modifier
                         .size(32.dp)
                         .background(
                             color = Color(0xFFFFEBEE),
                             shape = CircleShape
-                        )
+                        ),
+                    enabled = produk.stok > 0
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.minus),
                         contentDescription = "Minus",
-                        tint = Color(0xFFFF5252),
+                        tint = if (produk.stok > 0) Color(0xFFFF5252) else Color.Gray,
                         modifier = Modifier.size(16.dp)
                     )
                 }
 
                 // Jumlah
                 Text(
-                    text = jumlah.toString(),
+                    text = produk.stok.toString(),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black,
@@ -442,7 +587,12 @@ fun StokBarangCard(
 
 // Halaman 2: Barang Masuk
 @Composable
-fun BarangMasukPage() {
+fun BarangMasukPage(
+    riwayatList: List<RiwayatStokEntity>,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onExport: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -450,7 +600,7 @@ fun BarangMasukPage() {
     ) {
         // Tombol Export
         Button(
-            onClick = { /* Handle export */ },
+            onClick = onExport,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
@@ -479,8 +629,8 @@ fun BarangMasukPage() {
 
         // Search Bar
         OutlinedTextField(
-            value = "",
-            onValueChange = {},
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
             placeholder = {
                 Text(
                     "Cari Riwayat",
@@ -511,28 +661,35 @@ fun BarangMasukPage() {
         Spacer(modifier = Modifier.height(16.dp))
 
         // List Barang Masuk
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(3) { index ->
-                BarangMasukCard(
-                    namaBarang = "Galon 19Lt",
-                    sku = "889029900",
-                    tanggal = "12-12-2026",
-                    jumlah = 4
+        if (riwayatList.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Tidak ada riwayat barang masuk",
+                    fontSize = 16.sp,
+                    color = Color.Gray,
+                    fontFamily = plusjakarta
                 )
+            }
+        } else {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(riwayatList) { riwayat ->
+                    BarangMasukCard(riwayat = riwayat)
+                }
             }
         }
     }
 }
 
 @Composable
-fun BarangMasukCard(
-    namaBarang: String,
-    sku: String,
-    tanggal: String,
-    jumlah: Int
-) {
+fun BarangMasukCard(riwayat: RiwayatStokEntity) {
+    val dateFormat = SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault())
+    val tanggal = dateFormat.format(Date(riwayat.createdAt))
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -559,7 +716,8 @@ fun BarangMasukCard(
                 Icon(
                     painter = painterResource(R.drawable.masuk),
                     contentDescription = "Masuk",
-                    modifier = Modifier.size(20.dp), tint = Color.Unspecified
+                    modifier = Modifier.size(20.dp),
+                    tint = Color.Unspecified
                 )
             }
 
@@ -570,7 +728,7 @@ fun BarangMasukCard(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = namaBarang,
+                    text = riwayat.namaProduk,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black,
@@ -578,7 +736,7 @@ fun BarangMasukCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "SKU : $sku",
+                    text = riwayat.keterangan,
                     fontSize = 12.sp,
                     color = Color.Gray,
                     fontFamily = plusjakarta
@@ -602,7 +760,7 @@ fun BarangMasukCard(
                     .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 Text(
-                    text = "+$jumlah",
+                    text = "+${riwayat.jumlah}",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF4CAF50),
@@ -615,7 +773,12 @@ fun BarangMasukCard(
 
 // Halaman 3: Barang Keluar
 @Composable
-fun BarangKeluarPage() {
+fun BarangKeluarPage(
+    riwayatList: List<RiwayatStokEntity>,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onExport: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -623,7 +786,7 @@ fun BarangKeluarPage() {
     ) {
         // Tombol Export
         Button(
-            onClick = { /* Handle export */ },
+            onClick = onExport,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
@@ -652,8 +815,8 @@ fun BarangKeluarPage() {
 
         // Search Bar
         OutlinedTextField(
-            value = "",
-            onValueChange = {},
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
             placeholder = {
                 Text(
                     "Cari Riwayat",
@@ -684,28 +847,35 @@ fun BarangKeluarPage() {
         Spacer(modifier = Modifier.height(16.dp))
 
         // List Barang Keluar
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(3) { index ->
-                BarangKeluarCard(
-                    namaBarang = "Galon 19Lt",
-                    sku = "889029900",
-                    tanggal = "12-12-2026",
-                    jumlah = 4
+        if (riwayatList.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Tidak ada riwayat barang keluar",
+                    fontSize = 16.sp,
+                    color = Color.Gray,
+                    fontFamily = plusjakarta
                 )
+            }
+        } else {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(riwayatList) { riwayat ->
+                    BarangKeluarCard(riwayat = riwayat)
+                }
             }
         }
     }
 }
 
 @Composable
-fun BarangKeluarCard(
-    namaBarang: String,
-    sku: String,
-    tanggal: String,
-    jumlah: Int
-) {
+fun BarangKeluarCard(riwayat: RiwayatStokEntity) {
+    val dateFormat = SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault())
+    val tanggal = dateFormat.format(Date(riwayat.createdAt))
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -744,7 +914,7 @@ fun BarangKeluarCard(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = namaBarang,
+                    text = riwayat.namaProduk,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black,
@@ -752,7 +922,7 @@ fun BarangKeluarCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "SKU : $sku",
+                    text = riwayat.keterangan,
                     fontSize = 12.sp,
                     color = Color.Gray,
                     fontFamily = plusjakarta
@@ -776,7 +946,7 @@ fun BarangKeluarCard(
                     .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 Text(
-                    text = "-$jumlah",
+                    text = kotlin.math.abs(riwayat.jumlah).toString(),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFFFF5252),
@@ -787,13 +957,16 @@ fun BarangKeluarCard(
     }
 }
 
-// Dialog Tambah Stok
+// Dialog Tambah/Kurangi Stok
 @Composable
 fun TambahStokDialog(
+    produk: ProdukEntity?,
+    isAdding: Boolean,
     onDismiss: () -> Unit,
-    onSave: (Int) -> Unit
+    onSave: (Int, String) -> Unit
 ) {
     var jumlah by remember { mutableStateOf("") }
+    var keterangan by remember { mutableStateOf(if (isAdding) "Stok Masuk" else "Stok Keluar") }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -810,7 +983,7 @@ fun TambahStokDialog(
             ) {
                 // Title
                 Text(
-                    text = "Tambahkan Stok",
+                    text = if (isAdding) "Tambahkan Stok" else "Kurangi Stok",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black,
@@ -820,7 +993,16 @@ fun TambahStokDialog(
 
                 // Subtitle
                 Text(
-                    text = "Tentukan Jumlah Stok Yang Ingin Ditambahkan",
+                    text = produk?.namaProduk ?: "",
+                    fontSize = 16.sp,
+                    color = Color.Gray,
+                    fontFamily = plusjakarta,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+
+                Text(
+                    text = "Stok saat ini: ${produk?.stok ?: 0}",
                     fontSize = 13.sp,
                     color = Color.Gray,
                     fontFamily = plusjakarta,
@@ -840,15 +1022,48 @@ fun TambahStokDialog(
                 // Input Jumlah
                 OutlinedTextField(
                     value = jumlah,
-                    onValueChange = { jumlah = it },
+                    onValueChange = { if (it.all { char -> char.isDigit() }) jumlah = it },
                     placeholder = {
                         Text(
-                            "",
+                            "Masukkan jumlah",
                             color = Color.Gray,
                             fontFamily = plusjakarta
                         )
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedBorderColor = Color(0xFFE0E0E0),
+                        focusedBorderColor = Color(0xFFFDB913),
+                        unfocusedContainerColor = Color(0xFFF5F5F5),
+                        focusedContainerColor = Color(0xFFF5F5F5)
+                    )
+                )
+
+                // Label Keterangan
+                Text(
+                    text = "Keterangan",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.Black,
+                    fontFamily = plusjakarta,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                // Input Keterangan
+                OutlinedTextField(
+                    value = keterangan,
+                    onValueChange = { keterangan = it },
+                    placeholder = {
+                        Text(
+                            "Masukkan keterangan",
+                            color = Color.Gray,
+                            fontFamily = plusjakarta
+                        )
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 24.dp),
@@ -889,7 +1104,13 @@ fun TambahStokDialog(
                     // Simpan Button
                     Button(
                         onClick = {
-                            jumlah.toIntOrNull()?.let { onSave(it) }
+                            jumlah.toIntOrNull()?.let {
+                                if (it > 0) {
+                                    onSave(it, keterangan.ifBlank {
+                                        if (isAdding) "Stok Masuk" else "Stok Keluar"
+                                    })
+                                }
+                            }
                         },
                         modifier = Modifier
                             .weight(1f)
@@ -898,7 +1119,7 @@ fun TambahStokDialog(
                             containerColor = Color(0xFFFDB913)
                         ),
                         shape = RoundedCornerShape(12.dp),
-                        enabled = jumlah.isNotEmpty()
+                        enabled = jumlah.isNotEmpty() && jumlah.toIntOrNull() != null && jumlah.toInt() > 0
                     ) {
                         Text(
                             text = "Simpan",
