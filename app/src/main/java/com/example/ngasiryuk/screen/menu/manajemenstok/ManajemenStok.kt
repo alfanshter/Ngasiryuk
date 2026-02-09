@@ -286,6 +286,39 @@ fun StokPage(onAddClick: () -> Unit) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Search Bar
+        OutlinedTextField(
+            value = "",
+            onValueChange = {},
+            placeholder = {
+                Text(
+                    "Cari Riwayat",
+                    color = Color.Gray,
+                    fontFamily = plusjakarta,
+                    fontSize = 14.sp
+                )
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Search",
+                    tint = Color.Gray
+                )
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color(0xFFE0E0E0),
+                focusedBorderColor = Color(0xFFFDB913),
+                unfocusedContainerColor = Color.White,
+                focusedContainerColor = Color.White
+            )
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         // List Stok Barang
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(12.dp)
