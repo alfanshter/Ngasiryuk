@@ -54,6 +54,8 @@ import androidx.navigation.compose.rememberNavController
 import com.example.galonqu.commond.plusjakarta
 import com.example.ngasiryuk.data.local.entity.KategoriEntity
 import com.example.ngasiryuk.di.AppContainer
+import com.example.ngasiryuk.screen.component.PasswordProtectedScreen
+import com.example.ngasiryuk.utils.MenuConstants
 
 @Composable
 fun ListKategoriScreen(navController: NavController) {
@@ -63,6 +65,25 @@ fun ListKategoriScreen(navController: NavController) {
             return AppContainer.provideListKategoriViewModel() as T
         }
     })
+
+    val passwordViewModel = remember {
+        AppContainer.provideMenuPasswordViewModel()
+    }
+
+    PasswordProtectedScreen(
+        menuName = MenuConstants.MENU_KATEGORI,
+        viewModel = passwordViewModel,
+        onAccessGranted = {
+            ListKategoriContent(navController, viewModel)
+        },
+        onAccessDenied = {
+            navController.popBackStack()
+        }
+    )
+}
+
+@Composable
+private fun ListKategoriContent(navController: NavController, viewModel: ListKategoriViewModel) {
 
     var showDialog by remember { mutableStateOf(false) }
     var editingKategori by remember { mutableStateOf<KategoriEntity?>(null) }

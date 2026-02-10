@@ -1,9 +1,9 @@
 package com.example.ngasiryuk.screen.pengaturan
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -16,22 +16,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,37 +39,65 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.galonqu.commond.plusjakarta
 import com.example.ngasiryuk.R
+import com.example.ngasiryuk.di.AppContainer
 import com.example.ngasiryuk.screen.component.dialog.TambahPasswordDialog
 
 @Composable
-fun PengaturanPassword(navController: NavController) {
-    var showPasswordDialog by remember { mutableStateOf(false) }
-    var menuStates by remember {
-        mutableStateOf(
-            mapOf(
-                "Menu Barang Dan Jasa" to false,
-                "Menu Kategori" to false,
-                "Menu Manajemen Stok" to false,
-                "Menu Kasir" to false,
-                "Menu Rekap Penjualan" to false,
-                "Menu Pengaturan" to false,
-                "Menu Reset Database" to false,
-                "Menu Manajemen Customer" to false,
-                "Menu Export Database" to false
+fun PengaturanPassword(
+    navController: NavController
+) {
+    // Get viewModel from AppContainer with error handling
+    val viewModel = remember {
+        try {
+            AppContainer.provideMenuPasswordViewModel()
+        } catch (e: Exception) {
+            android.util.Log.e("PengaturanPassword", "Error creating ViewModel", e)
+            null
+        }
+    }
+
+    // Show error if ViewModel creation failed
+    if (viewModel == null) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "Error: Tidak dapat memuat pengaturan password",
+                color = Color.Red,
+                fontFamily = plusjakarta
             )
+        }
+        return
+    }
+
+    var showPasswordDialog by remember { mutableStateOf(false) }
+    var selectedMenu by remember { mutableStateOf("") }
+
+    val menuPasswords by viewModel.menuPasswords.collectAsState()
+
+    // Map menu states dari database
+    val menuStates = remember(menuPasswords) {
+        mapOf(
+            "Menu Barang Dan Jasa" to (menuPasswords["Menu Barang Dan Jasa"]?.isEnabled ?: false),
+            "Menu Kategori" to (menuPasswords["Menu Kategori"]?.isEnabled ?: false),
+            "Menu Manajemen Stok" to (menuPasswords["Menu Manajemen Stok"]?.isEnabled ?: false),
+            "Menu Kasir" to (menuPasswords["Menu Kasir"]?.isEnabled ?: false),
+            "Menu Rekap Penjualan" to (menuPasswords["Menu Rekap Penjualan"]?.isEnabled ?: false),
+            "Menu Pengaturan" to (menuPasswords["Menu Pengaturan"]?.isEnabled ?: false),
+            "Menu Reset Database" to (menuPasswords["Menu Reset Database"]?.isEnabled ?: false),
+            "Menu Manajemen Customer" to (menuPasswords["Menu Manajemen Customer"]?.isEnabled ?: false),
+            "Menu Export Database" to (menuPasswords["Menu Export Database"]?.isEnabled ?: false),
+            "Menu Import Database" to (menuPasswords["Menu Import Database"]?.isEnabled ?: false)
         )
     }
-    var selectedMenu by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
@@ -178,9 +202,7 @@ fun PengaturanPassword(navController: NavController) {
                                     selectedMenu = "Menu Barang Dan Jasa"
                                     showPasswordDialog = true
                                 } else {
-                                    menuStates = menuStates.toMutableMap().apply {
-                                        this["Menu Barang Dan Jasa"] = false
-                                    }
+                                    viewModel.deleteMenuPassword("Menu Barang Dan Jasa")
                                 }
                             }
                         )
@@ -197,9 +219,7 @@ fun PengaturanPassword(navController: NavController) {
                                     selectedMenu = "Menu Kategori"
                                     showPasswordDialog = true
                                 } else {
-                                    menuStates = menuStates.toMutableMap().apply {
-                                        this["Menu Kategori"] = false
-                                    }
+                                    viewModel.deleteMenuPassword("Menu Kategori")
                                 }
                             }
                         )
@@ -216,9 +236,7 @@ fun PengaturanPassword(navController: NavController) {
                                     selectedMenu = "Menu Manajemen Stok"
                                     showPasswordDialog = true
                                 } else {
-                                    menuStates = menuStates.toMutableMap().apply {
-                                        this["Menu Manajemen Stok"] = false
-                                    }
+                                    viewModel.deleteMenuPassword("Menu Manajemen Stok")
                                 }
                             }
                         )
@@ -235,9 +253,7 @@ fun PengaturanPassword(navController: NavController) {
                                     selectedMenu = "Menu Kasir"
                                     showPasswordDialog = true
                                 } else {
-                                    menuStates = menuStates.toMutableMap().apply {
-                                        this["Menu Kasir"] = false
-                                    }
+                                    viewModel.deleteMenuPassword("Menu Kasir")
                                 }
                             }
                         )
@@ -254,9 +270,7 @@ fun PengaturanPassword(navController: NavController) {
                                     selectedMenu = "Menu Rekap Penjualan"
                                     showPasswordDialog = true
                                 } else {
-                                    menuStates = menuStates.toMutableMap().apply {
-                                        this["Menu Rekap Penjualan"] = false
-                                    }
+                                    viewModel.deleteMenuPassword("Menu Rekap Penjualan")
                                 }
                             }
                         )
@@ -273,9 +287,7 @@ fun PengaturanPassword(navController: NavController) {
                                     selectedMenu = "Menu Pengaturan"
                                     showPasswordDialog = true
                                 } else {
-                                    menuStates = menuStates.toMutableMap().apply {
-                                        this["Menu Pengaturan"] = false
-                                    }
+                                    viewModel.deleteMenuPassword("Menu Pengaturan")
                                 }
                             }
                         )
@@ -292,9 +304,7 @@ fun PengaturanPassword(navController: NavController) {
                                     selectedMenu = "Menu Reset Database"
                                     showPasswordDialog = true
                                 } else {
-                                    menuStates = menuStates.toMutableMap().apply {
-                                        this["Menu Reset Database"] = false
-                                    }
+                                    viewModel.deleteMenuPassword("Menu Reset Database")
                                 }
                             }
                         )
@@ -311,9 +321,7 @@ fun PengaturanPassword(navController: NavController) {
                                     selectedMenu = "Menu Manajemen Customer"
                                     showPasswordDialog = true
                                 } else {
-                                    menuStates = menuStates.toMutableMap().apply {
-                                        this["Menu Manajemen Customer"] = false
-                                    }
+                                    viewModel.deleteMenuPassword("Menu Manajemen Customer")
                                 }
                             }
                         )
@@ -330,9 +338,7 @@ fun PengaturanPassword(navController: NavController) {
                                     selectedMenu = "Menu Export Database"
                                     showPasswordDialog = true
                                 } else {
-                                    menuStates = menuStates.toMutableMap().apply {
-                                        this["Menu Export Database"] = false
-                                    }
+                                    viewModel.deleteMenuPassword("Menu Export Database")
                                 }
                             }
                         )
@@ -342,16 +348,14 @@ fun PengaturanPassword(navController: NavController) {
                         MenuSecurityItem(
                             icon = painterResource(R.drawable.importdb),
                             iconTint = Color.Unspecified,
-                            title = "Menu Export Database",
-                            isEnabled = menuStates["Menu Export Database"] ?: false,
+                            title = "Menu Import Database",
+                            isEnabled = menuStates["Menu Import Database"] ?: false,
                             onToggle = { enabled ->
                                 if (enabled) {
-                                    selectedMenu = "Menu Export Database"
+                                    selectedMenu = "Menu Import Database"
                                     showPasswordDialog = true
                                 } else {
-                                    menuStates = menuStates.toMutableMap().apply {
-                                        this["Menu Export Database"] = false
-                                    }
+                                    viewModel.deleteMenuPassword("Menu Import Database")
                                 }
                             }
                         )
@@ -366,13 +370,9 @@ fun PengaturanPassword(navController: NavController) {
         TambahPasswordDialog(
             onDismiss = {
                 showPasswordDialog = false
-                // Reset switch jika dibatalkan
             },
             onSave = { password ->
-                // Handle save password untuk menu yang dipilih
-                menuStates = menuStates.toMutableMap().apply {
-                    this[selectedMenu] = true
-                }
+                viewModel.saveMenuPassword(selectedMenu, password)
                 showPasswordDialog = false
             }
         )

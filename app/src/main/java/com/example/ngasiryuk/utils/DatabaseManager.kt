@@ -128,7 +128,11 @@ object DatabaseManager {
     suspend fun importDatabase(context: Context, fileUri: Uri): Boolean = withContext(Dispatchers.IO) {
         try {
             // Tutup database terlebih dahulu
-            AppDatabase.getDatabase(context).close()
+            try {
+                AppDatabase.getDatabase(context).close()
+            } catch (e: Exception) {
+                android.util.Log.e("DatabaseManager", "Error closing database", e)
+            }
 
             // Path database internal
             val dbPath = context.getDatabasePath(DATABASE_NAME)
@@ -146,8 +150,20 @@ object DatabaseManager {
                 }
             } ?: throw Exception("Tidak dapat membaca file")
 
-            // Re-open database
-            AppDatabase.getDatabase(context)
+            // Re-open database dan re-initialize AppContainer
+            try {
+                AppDatabase.getDatabase(context)
+                // Re-initialize AppContainer untuk update repository references
+                com.example.ngasiryuk.di.AppContainer.initialize(context)
+            } catch (e: Exception) {
+                android.util.Log.e("DatabaseManager", "Error re-initializing after import", e)
+                // Restore backup jika ada error
+                val backupFile = File(dbPath.parent, "${DATABASE_NAME}_old")
+                if (backupFile.exists()) {
+                    backupFile.copyTo(dbPath, overwrite = true)
+                }
+                throw e
+            }
 
             withContext(Dispatchers.Main) {
                 Toast.makeText(
@@ -159,13 +175,20 @@ object DatabaseManager {
 
             return@withContext true
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("DatabaseManager", "Error importing database", e)
 
             // Restore backup jika ada
             val dbPath = context.getDatabasePath(DATABASE_NAME)
             val backupFile = File(dbPath.parent, "${DATABASE_NAME}_old")
             if (backupFile.exists()) {
-                backupFile.copyTo(dbPath, overwrite = true)
+                try {
+                    backupFile.copyTo(dbPath, overwrite = true)
+                    // Re-initialize setelah restore
+                    AppDatabase.getDatabase(context)
+                    com.example.ngasiryuk.di.AppContainer.initialize(context)
+                } catch (restoreError: Exception) {
+                    android.util.Log.e("DatabaseManager", "Error restoring backup", restoreError)
+                }
             }
 
             withContext(Dispatchers.Main) {
@@ -186,7 +209,11 @@ object DatabaseManager {
     suspend fun resetDatabase(context: Context): Boolean = withContext(Dispatchers.IO) {
         try {
             // Tutup database
-            AppDatabase.getDatabase(context).close()
+            try {
+                AppDatabase.getDatabase(context).close()
+            } catch (e: Exception) {
+                android.util.Log.e("DatabaseManager", "Error closing database", e)
+            }
 
             // Hapus database file
             val dbPath = context.getDatabasePath(DATABASE_NAME)
@@ -200,8 +227,14 @@ object DatabaseManager {
             walFile.delete()
 
             if (deleted) {
-                // Re-initialize database
-                AppDatabase.getDatabase(context)
+                // Re-initialize database dan AppContainer
+                try {
+                    AppDatabase.getDatabase(context)
+                    // Re-initialize AppContainer untuk update repository references
+                    com.example.ngasiryuk.di.AppContainer.initialize(context)
+                } catch (e: Exception) {
+                    android.util.Log.e("DatabaseManager", "Error re-initializing database", e)
+                }
 
                 withContext(Dispatchers.Main) {
                     Toast.makeText(

@@ -58,6 +58,8 @@ import androidx.navigation.compose.rememberNavController
 import com.example.galonqu.commond.plusjakarta
 import com.example.ngasiryuk.R
 import com.example.ngasiryuk.di.AppContainer
+import com.example.ngasiryuk.screen.component.PasswordProtectedScreen
+import com.example.ngasiryuk.utils.MenuConstants
 import java.util.Calendar
 import java.util.Locale
 
@@ -71,6 +73,28 @@ fun RekapPenjualan(
             return AppContainer.provideRekapPenjualanViewModel() as T
         }
     })
+) {
+    val passwordViewModel = remember {
+        AppContainer.provideMenuPasswordViewModel()
+    }
+
+    PasswordProtectedScreen(
+        menuName = MenuConstants.MENU_REKAP_PENJUALAN,
+        viewModel = passwordViewModel,
+        onAccessGranted = {
+            RekapPenjualanContent(navController, viewModel)
+        },
+        onAccessDenied = {
+            navController.popBackStack()
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RekapPenjualanContent(
+    navController: NavController,
+    viewModel: RekapPenjualanViewModel
 ) {
     // State dari ViewModel
     val selectedDateCalendar by viewModel.selectedDate.collectAsState()

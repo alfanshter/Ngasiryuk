@@ -60,7 +60,9 @@ import com.example.ngasiryuk.AppScreen
 import com.example.ngasiryuk.R
 import com.example.ngasiryuk.di.AppContainer
 import com.example.ngasiryuk.screen.component.dialog.ResetDatabaseDialog
+import com.example.ngasiryuk.screen.component.dialog.VerifikasiPasswordDialog
 import com.example.ngasiryuk.utils.DatabaseManager
+import com.example.ngasiryuk.utils.MenuConstants
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -85,8 +87,17 @@ fun Dashboard(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    // Password ViewModel
+    val passwordViewModel = remember {
+        AppContainer.provideMenuPasswordViewModel()
+    }
+    val verificationResult by passwordViewModel.verificationResult.collectAsState()
+
     // State untuk dialog dan loading
     var showResetDialog by remember { mutableStateOf(false) }
+    var showPasswordDialog by remember { mutableStateOf(false) }
+    var pendingMenuItem by remember { mutableStateOf<MenuItem?>(null) }
+    var passwordErrorMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
 
     // Launcher untuk memilih file database
@@ -96,16 +107,106 @@ fun Dashboard(
         uri?.let {
             isLoading = true
             scope.launch {
-                val success = DatabaseManager.importDatabase(context, it)
-                isLoading = false
-                if (success) {
-                    // Restart activity untuk reload data
-                    (context as? Activity)?.let { activity ->
-                        Toast.makeText(context, "Aplikasi akan restart...", Toast.LENGTH_SHORT).show()
-                        activity.finish()
-                        activity.startActivity(activity.intent)
+                try {
+                    val success = DatabaseManager.importDatabase(context, it)
+                    isLoading = false
+
+                    if (success) {
+                        // Delay sebentar sebelum restart untuk memastikan Toast sempat muncul
+                        kotlinx.coroutines.delay(1500)
+
+                        // Restart activity untuk reload data
+                        (context as? Activity)?.let { activity ->
+                            try {
+                                val intent = activity.intent
+                                activity.finish()
+                                activity.startActivity(intent)
+                                // Force kill process untuk clean restart
+                                android.os.Process.killProcess(android.os.Process.myPid())
+                            } catch (e: Exception) {
+                                android.util.Log.e("Dashboard", "Error restarting activity", e)
+                                Toast.makeText(context, "Silakan restart aplikasi secara manual", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("Dashboard", "Error importing database", e)
+                    isLoading = false
+                    Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    // Helper function to execute menu actions
+    val executeMenuAction: (MenuItem) -> Unit = { menuItem ->
+        when (menuItem.onClickAction) {
+            "import" -> {
+                importDatabaseLauncher.launch("*/*")
+            }
+            "export" -> {
+                isLoading = true
+                scope.launch {
+                    val file = DatabaseManager.exportDatabase(context)
+                    isLoading = false
+                    file?.let { exportedFile ->
+                        try {
+                            val uri = FileProvider.getUriForFile(
+                                context,
+                                "${context.packageName}.fileprovider",
+                                exportedFile
+                            )
+                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(uri, "application/octet-stream")
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(Intent.createChooser(intent, "Open with"))
+                        } catch (e: Exception) {
+                            android.util.Log.e("Dashboard", "Error opening export file", e)
+                            Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                        }
                     }
                 }
+            }
+            "reset" -> {
+                showResetDialog = true
+            }
+        }
+    }
+
+    // Helper function to get menu constant
+    val getMenuConstant: (String) -> String = { title ->
+        when(title) {
+            "Barang/Jasa" -> MenuConstants.MENU_BARANG_DAN_JASA
+            "Kategori" -> MenuConstants.MENU_KATEGORI
+            "Manajemen Stok" -> MenuConstants.MENU_MANAJEMEN_STOK
+            "Kasir" -> MenuConstants.MENU_KASIR
+            "Penjualan" -> MenuConstants.MENU_REKAP_PENJUALAN
+            "Pengaturan" -> MenuConstants.MENU_PENGATURAN
+            "Reset Database" -> MenuConstants.MENU_RESET_DATABASE
+            "Manajemen Customer" -> MenuConstants.MENU_MANAJEMEN_CUSTOMER
+            "Export Database" -> MenuConstants.MENU_EXPORT_DATABASE
+            "Import Database" -> MenuConstants.MENU_IMPORT_DATABASE
+            else -> title
+        }
+    }
+
+    // Handle verification result
+    androidx.compose.runtime.LaunchedEffect(verificationResult) {
+        verificationResult?.let { isValid ->
+            if (isValid) {
+                showPasswordDialog = false
+                passwordErrorMessage = null
+                passwordViewModel.resetVerificationResult()
+
+                // Execute pending action
+                pendingMenuItem?.let { menuItem ->
+                    executeMenuAction(menuItem)
+                    pendingMenuItem = null
+                }
+            } else {
+                passwordErrorMessage = "Password salah! Silakan coba lagi."
+                passwordViewModel.resetVerificationResult()
             }
         }
     }
@@ -117,17 +218,35 @@ fun Dashboard(
             onConfirm = {
                 isLoading = true
                 scope.launch {
-                    val success = DatabaseManager.resetDatabase(context)
-                    isLoading = false
-                    if (success) {
-                        // Restart activity untuk reload data
-                        (context as? Activity)?.let { activity ->
-                            Toast.makeText(context, "Aplikasi akan restart...", Toast.LENGTH_SHORT).show()
-                            activity.finish()
-                            activity.startActivity(activity.intent)
+                    try {
+                        val success = DatabaseManager.resetDatabase(context)
+                        isLoading = false
+
+                        if (success) {
+                            // Delay untuk Toast sempat muncul
+                            kotlinx.coroutines.delay(1500)
+
+                            // Restart activity untuk reload data
+                            (context as? Activity)?.let { activity ->
+                                try {
+                                    val intent = activity.intent
+                                    activity.finish()
+                                    activity.startActivity(intent)
+                                    // Force kill process untuk clean restart
+                                    android.os.Process.killProcess(android.os.Process.myPid())
+                                } catch (e: Exception) {
+                                    android.util.Log.e("Dashboard", "Error restarting after reset", e)
+                                    Toast.makeText(context, "Silakan restart aplikasi secara manual", Toast.LENGTH_LONG).show()
+                                }
+                            }
                         }
+                    } catch (e: Exception) {
+                        android.util.Log.e("Dashboard", "Error resetting database", e)
+                        isLoading = false
+                        Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
                     }
                 }
+                showResetDialog = false
             }
         )
     }
@@ -327,47 +446,27 @@ fun Dashboard(
                                 MenuCard(
                                     menuItem = menuItem,
                                     onClick = {
-                                        when (menuItem.onClickAction) {
-                                            "import" -> {
-                                                // Launch file picker untuk import database
-                                                importDatabaseLauncher.launch("*/*")
-                                            }
-                                            "export" -> {
-                                                // Export database
-                                                isLoading = true
-                                                scope.launch {
-                                                    val file = DatabaseManager.exportDatabase(context)
-                                                    isLoading = false
+                                        // Only check password for ACTION items (export, import, reset)
+                                        // For ROUTE navigation, let the destination screen handle password
+                                        if (menuItem.onClickAction != null) {
+                                            // This is an action item, check password first
+                                            val menuConstant = getMenuConstant(menuItem.title)
+                                            scope.launch {
+                                                val requiresPassword = passwordViewModel.isMenuPasswordEnabled(menuConstant)
 
-                                                    // Share file atau buka file manager
-                                                    file?.let { exportedFile ->
-                                                        try {
-                                                            val uri = FileProvider.getUriForFile(
-                                                                context,
-                                                                "${context.packageName}.fileprovider",
-                                                                exportedFile
-                                                            )
-                                                            val intent = Intent(Intent.ACTION_VIEW).apply {
-                                                                setDataAndType(uri, "application/octet-stream")
-                                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                                            }
-                                                            context.startActivity(Intent.createChooser(intent, "Open with"))
-                                                        } catch (e: Exception) {
-                                                            e.printStackTrace()
-                                                        }
-                                                    }
+                                                if (requiresPassword) {
+                                                    // Show password dialog for action
+                                                    pendingMenuItem = menuItem
+                                                    showPasswordDialog = true
+                                                } else {
+                                                    // Execute action directly
+                                                    executeMenuAction(menuItem)
                                                 }
                                             }
-                                            "reset" -> {
-                                                // Show reset confirmation dialog
-                                                showResetDialog = true
-                                            }
-                                            else -> {
-                                                // Navigate to route
-                                                menuItem.route?.let { route ->
-                                                    navController.navigate(route)
-                                                }
-                                            }
+                                        } else {
+                                            // This is a route navigation, just navigate
+                                            // Password will be checked at destination screen
+                                            menuItem.route?.let { navController.navigate(it) }
                                         }
                                     },
                                     modifier = Modifier.weight(1f)
@@ -413,6 +512,23 @@ fun Dashboard(
             }
         }
         }
+    }
+
+    // Password Dialog
+    if (showPasswordDialog && pendingMenuItem != null) {
+        VerifikasiPasswordDialog(
+            menuName = pendingMenuItem!!.title,
+            onDismiss = {
+                showPasswordDialog = false
+                pendingMenuItem = null
+                passwordErrorMessage = null
+            },
+            onVerify = { inputPassword ->
+                val menuConstant = getMenuConstant(pendingMenuItem!!.title)
+                passwordViewModel.verifyPassword(menuConstant, inputPassword)
+            },
+            errorMessage = passwordErrorMessage
+        )
     }
 }
 

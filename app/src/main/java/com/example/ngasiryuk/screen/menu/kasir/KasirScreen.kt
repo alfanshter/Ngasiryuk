@@ -66,9 +66,11 @@ import androidx.navigation.compose.rememberNavController
 import com.example.galonqu.commond.plusjakarta
 import com.example.ngasiryuk.R
 import com.example.ngasiryuk.di.AppContainer
+import com.example.ngasiryuk.screen.component.PasswordProtectedScreen
 import com.example.ngasiryuk.screen.component.dialog.TambahCustomerDialog
 import com.example.ngasiryuk.screen.component.dialog.TambahKasirDialog
 import com.example.ngasiryuk.screen.component.dialog.TambahProdukKeKeranjangDialog
+import com.example.ngasiryuk.utils.MenuConstants
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,6 +83,28 @@ fun KasirScreen(
             return AppContainer.provideKasirViewModel() as T
         }
     })
+) {
+    val passwordViewModel = remember {
+        AppContainer.provideMenuPasswordViewModel()
+    }
+
+    PasswordProtectedScreen(
+        menuName = MenuConstants.MENU_KASIR,
+        viewModel = passwordViewModel,
+        onAccessGranted = {
+            KasirScreenContent(navController, viewModel)
+        },
+        onAccessDenied = {
+            navController.popBackStack()
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun KasirScreenContent(
+    navController: NavController,
+    viewModel: KasirViewModel
 ) {
     // State dari ViewModel
     val kasirList by viewModel.kasirList.collectAsState()

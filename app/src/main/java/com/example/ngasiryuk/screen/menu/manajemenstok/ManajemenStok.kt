@@ -67,7 +67,9 @@ import com.example.ngasiryuk.R
 import com.example.ngasiryuk.data.local.entity.ProdukEntity
 import com.example.ngasiryuk.data.local.entity.RiwayatStokEntity
 import com.example.ngasiryuk.di.AppContainer
+import com.example.ngasiryuk.screen.component.PasswordProtectedScreen
 import com.example.ngasiryuk.utils.ExportUtils
+import com.example.ngasiryuk.utils.MenuConstants
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -83,6 +85,25 @@ fun ManajemenStok(navController: NavController) {
         }
     })
 
+    val passwordViewModel = remember {
+        AppContainer.provideMenuPasswordViewModel()
+    }
+
+    PasswordProtectedScreen(
+        menuName = MenuConstants.MENU_MANAJEMEN_STOK,
+        viewModel = passwordViewModel,
+        onAccessGranted = {
+            ManajemenStokContent(navController, viewModel)
+        },
+        onAccessDenied = {
+            navController.popBackStack()
+        }
+    )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ManajemenStokContent(navController: NavController, viewModel: ManajemenStokViewModel) {
     val context = LocalContext.current
     val pagerState = rememberPagerState(pageCount = { 3 })
     val scope = rememberCoroutineScope()

@@ -70,6 +70,8 @@ import com.example.ngasiryuk.data.local.entity.KategoriEntity
 import com.example.ngasiryuk.data.local.entity.ProdukEntity
 import com.example.ngasiryuk.data.local.entity.RiwayatStokEntity
 import com.example.ngasiryuk.di.AppContainer
+import com.example.ngasiryuk.screen.component.PasswordProtectedScreen
+import com.example.ngasiryuk.utils.MenuConstants
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -85,6 +87,28 @@ fun KelolaProduk(
             return AppContainer.provideKelolaProdukViewModel() as T
         }
     })
+) {
+    val passwordViewModel = remember {
+        AppContainer.provideMenuPasswordViewModel()
+    }
+
+    PasswordProtectedScreen(
+        menuName = MenuConstants.MENU_BARANG_DAN_JASA,
+        viewModel = passwordViewModel,
+        onAccessGranted = {
+            KelolaProdukContent(navController, viewModel)
+        },
+        onAccessDenied = {
+            navController.popBackStack()
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun KelolaProdukContent(
+    navController: NavController,
+    viewModel: KelolaProdukViewModel
 ) {
     val context = LocalContext.current
     var selectedTab by remember { mutableStateOf(0) }

@@ -18,8 +18,22 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
     }
 }
 
+// Migration from version 6 to 7 - Add MenuPassword table
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // Create menu_password table
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS menu_password (
+                menuName TEXT PRIMARY KEY NOT NULL,
+                password TEXT NOT NULL,
+                isEnabled INTEGER NOT NULL DEFAULT 1
+            )
+        """.trimIndent())
+    }
+}
+
 // Template untuk migration selanjutnya
-// val MIGRATION_4_5 = object : Migration(4, 5) {
+// val MIGRATION_7_8 = object : Migration(7, 8) {
 //     override fun migrate(database: SupportSQLiteDatabase) {
 //         // Add your migration code here
 //     }

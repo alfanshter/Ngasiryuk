@@ -7,6 +7,7 @@ import com.example.ngasiryuk.data.repository.CustomerRepositoryImpl
 import com.example.ngasiryuk.data.repository.KasirRepository
 import com.example.ngasiryuk.data.repository.KasirRepositoryImpl
 import com.example.ngasiryuk.data.repository.KategoriRepositoryImpl
+import com.example.ngasiryuk.data.repository.MenuPasswordRepository
 import com.example.ngasiryuk.data.repository.TokoRepositoryImpl
 import com.example.ngasiryuk.data.repository.KategoriRepository
 import com.example.ngasiryuk.data.repository.ProdukRepository
@@ -29,6 +30,7 @@ import com.example.ngasiryuk.screen.menu.kelolaproduk.KelolaProdukViewModel
 import com.example.ngasiryuk.screen.menu.listcustomer.ListCustomerViewModel
 import com.example.ngasiryuk.screen.menu.manajemenstok.ManajemenStokViewModel
 import com.example.ngasiryuk.screen.menu.rekappenjualan.RekapPenjualanViewModel
+import com.example.ngasiryuk.viewmodel.MenuPasswordViewModel
 
 object AppContainer {
 
@@ -40,6 +42,7 @@ object AppContainer {
     private lateinit var kasirRepository: KasirRepository
     private lateinit var customerRepository: CustomerRepository
     private lateinit var transaksiRepository: TransaksiRepository
+    private lateinit var menuPasswordRepository: MenuPasswordRepository
 
     fun initialize(context: Context) {
         database = AppDatabase.getDatabase(context)
@@ -54,6 +57,7 @@ object AppContainer {
             database.detailTransaksiDao(),
             database.produkDao()
         )
+        menuPasswordRepository = MenuPasswordRepository(database.menuPasswordDao())
     }
 
     fun provideGetTokoUseCase(): GetTokoUseCase {
@@ -131,6 +135,12 @@ object AppContainer {
     fun provideRekapPenjualanViewModel(): RekapPenjualanViewModel {
         return RekapPenjualanViewModel(
             transaksiRepository = transaksiRepository
+        )
+    }
+
+    fun provideMenuPasswordViewModel(): MenuPasswordViewModel {
+        return MenuPasswordViewModel(
+            repository = menuPasswordRepository
         )
     }
 }

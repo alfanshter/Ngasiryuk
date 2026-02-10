@@ -48,9 +48,11 @@ import androidx.navigation.compose.rememberNavController
 import com.example.galonqu.commond.plusjakarta
 import com.example.ngasiryuk.data.local.entity.CustomerEntity
 import com.example.ngasiryuk.di.AppContainer
+import com.example.ngasiryuk.screen.component.PasswordProtectedScreen
 import com.example.ngasiryuk.screen.component.dialog.EditCustomerDialog
 import com.example.ngasiryuk.screen.component.dialog.TambahCustomerDialog
 import com.example.ngasiryuk.screen.menu.listcustomer.ListCustomerViewModel
+import com.example.ngasiryuk.utils.MenuConstants
 
 @Composable
 fun ListCustomer(
@@ -61,6 +63,27 @@ fun ListCustomer(
             return AppContainer.provideListCustomerViewModel() as T
         }
     })
+) {
+    val passwordViewModel = remember {
+        AppContainer.provideMenuPasswordViewModel()
+    }
+
+    PasswordProtectedScreen(
+        menuName = MenuConstants.MENU_MANAJEMEN_CUSTOMER,
+        viewModel = passwordViewModel,
+        onAccessGranted = {
+            ListCustomerContent(navController, viewModel)
+        },
+        onAccessDenied = {
+            navController.popBackStack()
+        }
+    )
+}
+
+@Composable
+private fun ListCustomerContent(
+    navController: NavController,
+    viewModel: ListCustomerViewModel
 ) {
     var showTambahCustomerDialog by remember { mutableStateOf(false) }
     var showEditCustomerDialog by remember { mutableStateOf(false) }
