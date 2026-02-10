@@ -1,5 +1,10 @@
 package com.example.ngasiryuk.screen.menu.dashboard
 
+import android.app.Activity
+import android.content.Intent
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -28,17 +34,23 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
@@ -47,12 +59,16 @@ import com.example.galonqu.commond.plusjakarta
 import com.example.ngasiryuk.AppScreen
 import com.example.ngasiryuk.R
 import com.example.ngasiryuk.di.AppContainer
+import com.example.ngasiryuk.screen.component.dialog.ResetDatabaseDialog
+import com.example.ngasiryuk.utils.DatabaseManager
+import kotlinx.coroutines.launch
 import java.io.File
 
 data class MenuItem(
     val title: String,
     val iconRes: Int,  // Ubah ke Int untuk painterResource
-    val route: String? = null
+    val route: String? = null,
+    val onClickAction: String? = null  // Untuk action khusus seperti import, export, reset
 )
 
 @Composable
@@ -66,6 +82,55 @@ fun Dashboard(
     })
 ) {
     val toko by viewModel.toko.collectAsState()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    // State untuk dialog dan loading
+    var showResetDialog by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
+
+    // Launcher untuk memilih file database
+    val importDatabaseLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            isLoading = true
+            scope.launch {
+                val success = DatabaseManager.importDatabase(context, it)
+                isLoading = false
+                if (success) {
+                    // Restart activity untuk reload data
+                    (context as? Activity)?.let { activity ->
+                        Toast.makeText(context, "Aplikasi akan restart...", Toast.LENGTH_SHORT).show()
+                        activity.finish()
+                        activity.startActivity(activity.intent)
+                    }
+                }
+            }
+        }
+    }
+
+    // Reset Dialog
+    if (showResetDialog) {
+        ResetDatabaseDialog(
+            onDismiss = { showResetDialog = false },
+            onConfirm = {
+                isLoading = true
+                scope.launch {
+                    val success = DatabaseManager.resetDatabase(context)
+                    isLoading = false
+                    if (success) {
+                        // Restart activity untuk reload data
+                        (context as? Activity)?.let { activity ->
+                            Toast.makeText(context, "Aplikasi akan restart...", Toast.LENGTH_SHORT).show()
+                            activity.finish()
+                            activity.startActivity(activity.intent)
+                        }
+                    }
+                }
+            }
+        )
+    }
 
     // Data menu items dengan route navigation
     val menuItems = listOf(
@@ -107,12 +172,14 @@ fun Dashboard(
         MenuItem(
             title = "Import Database",
             iconRes = R.drawable.importdb,
-            route = null // Belum ada screen
+            route = null,
+            onClickAction = "import"
         ),
         MenuItem(
             title = "Reset Database",
             iconRes = R.drawable.resetdb,
-            route = null // Belum ada screen
+            route = null,
+            onClickAction = "reset"
         ),
         MenuItem(
             title = "Manajemen Customer",
@@ -122,7 +189,8 @@ fun Dashboard(
         MenuItem(
             title = "Export Database",
             iconRes = R.drawable.importdb,
-            route = null // Belum ada screen
+            route = null,
+            onClickAction = "export"
         )
     )
 
@@ -156,13 +224,14 @@ fun Dashboard(
         },
         contentWindowInsets = WindowInsets(0)
     ) { paddingValues ->
-        // Konten halaman
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(Color(0xFFF5F5F5))
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Konten halaman
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .background(Color(0xFFF5F5F5))
+            ) {
             item {
                 Column(
                     modifier = Modifier
@@ -244,7 +313,7 @@ fun Dashboard(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
 
                     // Menu Grid menggunakan items di LazyColumn
                     menuItems.chunked(2).forEach { rowItems ->
@@ -258,8 +327,47 @@ fun Dashboard(
                                 MenuCard(
                                     menuItem = menuItem,
                                     onClick = {
-                                        menuItem.route?.let { route ->
-                                            navController.navigate(route)
+                                        when (menuItem.onClickAction) {
+                                            "import" -> {
+                                                // Launch file picker untuk import database
+                                                importDatabaseLauncher.launch("*/*")
+                                            }
+                                            "export" -> {
+                                                // Export database
+                                                isLoading = true
+                                                scope.launch {
+                                                    val file = DatabaseManager.exportDatabase(context)
+                                                    isLoading = false
+
+                                                    // Share file atau buka file manager
+                                                    file?.let { exportedFile ->
+                                                        try {
+                                                            val uri = FileProvider.getUriForFile(
+                                                                context,
+                                                                "${context.packageName}.fileprovider",
+                                                                exportedFile
+                                                            )
+                                                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                                                setDataAndType(uri, "application/octet-stream")
+                                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                            }
+                                                            context.startActivity(Intent.createChooser(intent, "Open with"))
+                                                        } catch (e: Exception) {
+                                                            e.printStackTrace()
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            "reset" -> {
+                                                // Show reset confirmation dialog
+                                                showResetDialog = true
+                                            }
+                                            else -> {
+                                                // Navigate to route
+                                                menuItem.route?.let { route ->
+                                                    navController.navigate(route)
+                                                }
+                                            }
                                         }
                                     },
                                     modifier = Modifier.weight(1f)
@@ -272,9 +380,38 @@ fun Dashboard(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
                 }
             }
+        }
+
+        // Loading overlay
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(color = Color(0xFFFDB913))
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Memproses...",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+        }
         }
     }
 }

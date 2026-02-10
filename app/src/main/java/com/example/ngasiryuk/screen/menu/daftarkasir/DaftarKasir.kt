@@ -118,7 +118,7 @@ fun DaftarKasir(
                 onClick = { showTambahKasirDialog = true },
                 containerColor = Color(0xFFFDB913),
                 contentColor = Color.Black,
-                modifier = Modifier.size(56.dp).padding(bottom = 35.dp)
+                modifier = Modifier.padding(bottom = 35.dp).size(56.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
