@@ -1,6 +1,5 @@
 package com.example.ngasiryuk.screen.pengaturan
 
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,10 +46,32 @@ import androidx.navigation.compose.rememberNavController
 import com.example.galonqu.commond.plusjakarta
 import com.example.ngasiryuk.R
 import com.example.ngasiryuk.di.AppContainer
+import com.example.ngasiryuk.screen.component.PasswordProtectedScreen
 import com.example.ngasiryuk.screen.component.dialog.TambahPasswordDialog
+import com.example.ngasiryuk.utils.MenuConstants
 
 @Composable
 fun PengaturanPassword(
+    navController: NavController
+) {
+    val passwordViewModel = remember {
+        AppContainer.provideMenuPasswordViewModel()
+    }
+
+    PasswordProtectedScreen(
+        menuName = MenuConstants.MENU_PENGATURAN,
+        viewModel = passwordViewModel,
+        onAccessGranted = {
+            PengaturanPasswordContent(navController)
+        },
+        onAccessDenied = {
+            navController.popBackStack()
+        }
+    )
+}
+
+@Composable
+private fun PengaturanPasswordContent(
     navController: NavController
 ) {
     // Get viewModel from AppContainer with error handling
