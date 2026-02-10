@@ -160,7 +160,7 @@ fun VerifikasiPasswordDialog(
                             color = Color.Black,
                             fontWeight = FontWeight.Bold,
                             fontFamily = plusjakarta,
-                            fontSize = 16.sp
+                            fontSize = 12.sp
                         )
                     }
                 }

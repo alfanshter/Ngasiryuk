@@ -29,6 +29,19 @@ object DatabaseManager {
      */
     suspend fun exportDatabase(context: Context): File? = withContext(Dispatchers.IO) {
         try {
+            android.util.Log.d("DatabaseManager", "Starting export database...")
+
+            // CRITICAL: Checkpoint database untuk flush semua data ke disk
+            try {
+                val database = AppDatabase.getDatabase(context)
+                // Force checkpoint untuk memastikan semua data ter-write ke disk
+                database.openHelper.writableDatabase.execSQL("PRAGMA wal_checkpoint(FULL)")
+                android.util.Log.d("DatabaseManager", "Database checkpoint completed")
+            } catch (e: Exception) {
+                android.util.Log.e("DatabaseManager", "Error during checkpoint", e)
+                // Continue anyway, try to export what we have
+            }
+
             // Path database internal
             val dbPath = context.getDatabasePath(DATABASE_NAME)
 
@@ -38,6 +51,9 @@ object DatabaseManager {
                 }
                 return@withContext null
             }
+
+            android.util.Log.d("DatabaseManager", "Database file found: ${dbPath.absolutePath}")
+            android.util.Log.d("DatabaseManager", "Database file size: ${dbPath.length()} bytes")
 
             // Buat nama file dengan timestamp
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
@@ -127,39 +143,53 @@ object DatabaseManager {
      */
     suspend fun importDatabase(context: Context, fileUri: Uri): Boolean = withContext(Dispatchers.IO) {
         try {
+            android.util.Log.d("DatabaseManager", "Starting import database from URI: $fileUri")
+
             // Tutup database terlebih dahulu
             try {
+                android.util.Log.d("DatabaseManager", "Closing current database...")
                 AppDatabase.getDatabase(context).close()
+                android.util.Log.d("DatabaseManager", "Database closed successfully")
             } catch (e: Exception) {
                 android.util.Log.e("DatabaseManager", "Error closing database", e)
             }
 
             // Path database internal
             val dbPath = context.getDatabasePath(DATABASE_NAME)
+            android.util.Log.d("DatabaseManager", "Database path: ${dbPath.absolutePath}")
 
             // Backup database lama terlebih dahulu
             if (dbPath.exists()) {
+                android.util.Log.d("DatabaseManager", "Backing up old database...")
                 val backupFile = File(dbPath.parent, "${DATABASE_NAME}_old")
                 dbPath.copyTo(backupFile, overwrite = true)
+                android.util.Log.d("DatabaseManager", "Old database backed up to: ${backupFile.absolutePath}")
             }
 
             // Copy file yang di-import ke database path
+            android.util.Log.d("DatabaseManager", "Copying imported file to database path...")
+            var bytesCopied = 0L
             context.contentResolver.openInputStream(fileUri)?.use { input ->
                 FileOutputStream(dbPath).use { output ->
-                    input.copyTo(output)
+                    bytesCopied = input.copyTo(output)
                 }
             } ?: throw Exception("Tidak dapat membaca file")
+            android.util.Log.d("DatabaseManager", "Imported file copied: $bytesCopied bytes")
 
             // Re-open database dan re-initialize AppContainer
             try {
+                android.util.Log.d("DatabaseManager", "Re-opening database...")
                 AppDatabase.getDatabase(context)
+                android.util.Log.d("DatabaseManager", "Re-initializing AppContainer...")
                 // Re-initialize AppContainer untuk update repository references
                 com.example.ngasiryuk.di.AppContainer.initialize(context)
+                android.util.Log.d("DatabaseManager", "AppContainer re-initialized successfully")
             } catch (e: Exception) {
                 android.util.Log.e("DatabaseManager", "Error re-initializing after import", e)
                 // Restore backup jika ada error
                 val backupFile = File(dbPath.parent, "${DATABASE_NAME}_old")
                 if (backupFile.exists()) {
+                    android.util.Log.d("DatabaseManager", "Restoring backup due to error...")
                     backupFile.copyTo(dbPath, overwrite = true)
                 }
                 throw e
@@ -173,6 +203,7 @@ object DatabaseManager {
                 ).show()
             }
 
+            android.util.Log.d("DatabaseManager", "Import completed successfully")
             return@withContext true
         } catch (e: Exception) {
             android.util.Log.e("DatabaseManager", "Error importing database", e)

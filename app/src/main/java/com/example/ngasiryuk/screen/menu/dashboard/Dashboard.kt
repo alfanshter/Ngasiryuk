@@ -3,6 +3,7 @@ package com.example.ngasiryuk.screen.menu.dashboard
 import android.app.Activity
 import android.content.Intent
 import android.widget.Toast
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -115,11 +116,15 @@ fun Dashboard(
                         // Delay sebentar sebelum restart untuk memastikan Toast sempat muncul
                         kotlinx.coroutines.delay(1500)
 
+                        // Clear ViewModelStore untuk force recreate semua ViewModel
+                        (context as? ComponentActivity)?.viewModelStore?.clear()
+
                         // Restart activity untuk reload data
-                        (context as? Activity)?.let { activity ->
+                        (context as? ComponentActivity)?.let { activity ->
                             try {
-                                val intent = activity.intent
-                                activity.finish()
+                                val intent = activity.packageManager
+                                    ?.getLaunchIntentForPackage(activity.packageName)
+                                intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
                                 activity.startActivity(intent)
                                 // Force kill process untuk clean restart
                                 android.os.Process.killProcess(android.os.Process.myPid())
@@ -226,11 +231,15 @@ fun Dashboard(
                             // Delay untuk Toast sempat muncul
                             kotlinx.coroutines.delay(1500)
 
+                            // Clear ViewModelStore untuk force recreate semua ViewModel
+                            (context as? ComponentActivity)?.viewModelStore?.clear()
+
                             // Restart activity untuk reload data
-                            (context as? Activity)?.let { activity ->
+                            (context as? ComponentActivity)?.let { activity ->
                                 try {
-                                    val intent = activity.intent
-                                    activity.finish()
+                                    val intent = activity.packageManager
+                                        ?.getLaunchIntentForPackage(activity.packageName)
+                                    intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
                                     activity.startActivity(intent)
                                     // Force kill process untuk clean restart
                                     android.os.Process.killProcess(android.os.Process.myPid())
