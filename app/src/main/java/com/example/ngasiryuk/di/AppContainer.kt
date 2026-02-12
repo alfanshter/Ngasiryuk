@@ -128,7 +128,8 @@ object AppContainer {
             kasirRepository = kasirRepository,
             customerRepository = customerRepository,
             produkRepository = produkRepository,
-            transaksiRepository = transaksiRepository
+            transaksiRepository = transaksiRepository,
+            kategoriRepository = kategoriRepository
         )
     }
 

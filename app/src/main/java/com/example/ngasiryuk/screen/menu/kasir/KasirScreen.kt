@@ -110,6 +110,7 @@ private fun KasirScreenContent(
     val kasirList by viewModel.kasirList.collectAsState()
     val customerList by viewModel.customerList.collectAsState()
     val produkList by viewModel.produkList.collectAsState()
+    val kategoriList by viewModel.kategoriList.collectAsState()
     val selectedKasir by viewModel.selectedKasir.collectAsState()
     val selectedCustomer by viewModel.selectedCustomer.collectAsState()
     val keranjangItems by viewModel.keranjangItems.collectAsState()
@@ -629,10 +630,14 @@ private fun KasirScreenContent(
     if (showTambahKeranjangDialog) {
         TambahProdukKeKeranjangDialog(
             produkList = produkList,
+            kategoriList = kategoriList,
             onDismiss = { showTambahKeranjangDialog = false },
             onSave = { produk, jumlah ->
                 viewModel.addToKeranjang(produk, jumlah)
                 showTambahKeranjangDialog = false
+            },
+            onAddProduk = { namaProduk, sku, stok, kategoriId, kategoriNama, hargaBeli, hargaJual ->
+                viewModel.addProduk(namaProduk, sku, stok, kategoriId, kategoriNama, hargaBeli, hargaJual)
             }
         )
     }

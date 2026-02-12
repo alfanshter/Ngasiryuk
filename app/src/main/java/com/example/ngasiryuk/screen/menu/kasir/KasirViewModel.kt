@@ -5,10 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.example.ngasiryuk.data.local.entity.CustomerEntity
 import com.example.ngasiryuk.data.local.entity.DetailTransaksiEntity
 import com.example.ngasiryuk.data.local.entity.KasirEntity
+import com.example.ngasiryuk.data.local.entity.KategoriEntity
 import com.example.ngasiryuk.data.local.entity.ProdukEntity
 import com.example.ngasiryuk.data.local.entity.TransaksiEntity
 import com.example.ngasiryuk.data.repository.CustomerRepository
 import com.example.ngasiryuk.data.repository.KasirRepository
+import com.example.ngasiryuk.data.repository.KategoriRepository
 import com.example.ngasiryuk.data.repository.ProdukRepository
 import com.example.ngasiryuk.data.repository.TransaksiRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,7 +25,8 @@ class KasirViewModel(
     private val kasirRepository: KasirRepository,
     private val customerRepository: CustomerRepository,
     private val produkRepository: ProdukRepository,
-    private val transaksiRepository: TransaksiRepository
+    private val transaksiRepository: TransaksiRepository,
+    private val kategoriRepository: KategoriRepository
 ) : ViewModel() {
 
     private val _kasirList = MutableStateFlow<List<KasirEntity>>(emptyList())
@@ -34,6 +37,9 @@ class KasirViewModel(
 
     private val _produkList = MutableStateFlow<List<ProdukEntity>>(emptyList())
     val produkList: StateFlow<List<ProdukEntity>> = _produkList.asStateFlow()
+
+    private val _kategoriList = MutableStateFlow<List<KategoriEntity>>(emptyList())
+    val kategoriList: StateFlow<List<KategoriEntity>> = _kategoriList.asStateFlow()
 
     private val _selectedKasir = MutableStateFlow<KasirEntity?>(null)
     val selectedKasir: StateFlow<KasirEntity?> = _selectedKasir.asStateFlow()
@@ -103,6 +109,17 @@ class KasirViewModel(
                 _errorMessage.value = "Error loading produk: ${e.message}"
             } finally {
                 _isLoading.value = false
+            }
+        }
+
+        viewModelScope.launch {
+            try {
+                // Load Kategori
+                kategoriRepository.getAllKategori().collect { kategoriList ->
+                    _kategoriList.value = kategoriList
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = "Error loading kategori: ${e.message}"
             }
         }
     }
@@ -270,6 +287,41 @@ class KasirViewModel(
                 kasirRepository.insertKasir(namaKasir)
             } catch (e: Exception) {
                 _errorMessage.value = "Error adding kasir: ${e.message}"
+            }
+        }
+    }
+
+    fun addProduk(
+        namaProduk: String,
+        sku: String,
+        stok: Int,
+        kategoriId: Int,
+        kategoriNama: String,
+        hargaBeli: Double,
+        hargaJual: Double
+    ) {
+        viewModelScope.launch {
+            try {
+                val status = when {
+                    stok <= 0 -> "Out of Stock"
+                    stok < 5 -> "Low Stock"
+                    else -> "Ready"
+                }
+
+                val produk = ProdukEntity(
+                    namaProduk = namaProduk,
+                    sku = sku,
+                    stok = stok,
+                    kategoriId = kategoriId,
+                    kategoriNama = kategoriNama,
+                    hargaBeli = hargaBeli,
+                    hargaJual = hargaJual,
+                    status = status
+                )
+                produkRepository.insertProduk(produk)
+                _successMessage.value = "Produk berhasil ditambahkan"
+            } catch (e: Exception) {
+                _errorMessage.value = "Error adding produk: ${e.message}"
             }
         }
     }
