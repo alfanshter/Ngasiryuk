@@ -69,7 +69,7 @@ import com.example.ngasiryuk.di.AppContainer
 import com.example.ngasiryuk.screen.component.PasswordProtectedScreen
 import com.example.ngasiryuk.screen.component.dialog.TambahCustomerDialog
 import com.example.ngasiryuk.screen.component.dialog.TambahKasirDialog
-import com.example.ngasiryuk.screen.component.dialog.TambahProdukKeKeranjangDialog
+import com.example.ngasiryuk.screen.component.bottomsheet.TambahKeranjangBottomSheet
 import com.example.ngasiryuk.utils.MenuConstants
 import kotlinx.coroutines.launch
 
@@ -142,10 +142,15 @@ private fun KasirScreenContent(
     var expandedPelanggan by remember { mutableStateOf(false) }
     var showTambahCustomerDialog by remember { mutableStateOf(false) }
     var showTambahKasirDialog by remember { mutableStateOf(false) }
-    var showTambahKeranjangDialog by remember { mutableStateOf(false) }
+    var showTambahKeranjangBottomSheet by remember { mutableStateOf(false) }
+    var showQRScannerInBottomSheet by remember { mutableStateOf(false) }
     var showQRScanner by remember { mutableStateOf(false) }
     var showPembayaranBottomSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val keranjangSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // State untuk menyimpan barcode dari scanner
+    var scannedBarcode by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
@@ -480,7 +485,7 @@ private fun KasirScreenContent(
                     item {
                         // Tombol Tambah Keranjang
                         OutlinedButton(
-                            onClick = { showTambahKeranjangDialog = true },
+                            onClick = { showTambahKeranjangBottomSheet = true },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(50.dp),
@@ -626,19 +631,62 @@ private fun KasirScreenContent(
         )
     }
 
-    // Dialog Tambah Ke Keranjang
-    if (showTambahKeranjangDialog) {
-        TambahProdukKeKeranjangDialog(
-            produkList = produkList,
-            kategoriList = kategoriList,
-            onDismiss = { showTambahKeranjangDialog = false },
-            onSave = { produk, jumlah ->
-                viewModel.addToKeranjang(produk, jumlah)
-                showTambahKeranjangDialog = false
-            },
-            onAddProduk = { namaProduk, sku, stok, kategoriId, kategoriNama, hargaBeli, hargaJual ->
-                viewModel.addProduk(namaProduk, sku, stok, kategoriId, kategoriNama, hargaBeli, hargaJual)
+    // BottomSheet Tambah Ke Keranjang
+    if (showTambahKeranjangBottomSheet && !showQRScannerInBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showTambahKeranjangBottomSheet = false },
+            sheetState = keranjangSheetState,
+            containerColor = Color.White,
+            dragHandle = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(40.dp)
+                            .height(4.dp)
+                            .background(
+                                color = Color.LightGray,
+                                shape = RoundedCornerShape(2.dp)
+                            )
+                    )
+                }
             }
+        ) {
+            TambahKeranjangBottomSheet(
+                produkList = produkList,
+                kategoriList = kategoriList,
+                scannedBarcode = scannedBarcode,
+                onDismiss = {
+                    showTambahKeranjangBottomSheet = false
+                    scannedBarcode = "" // Reset barcode
+                },
+                onSave = { produk, jumlah ->
+                    viewModel.addToKeranjang(produk, jumlah)
+                    showTambahKeranjangBottomSheet = false
+                    scannedBarcode = "" // Reset barcode
+                },
+                onAddProduk = { namaProduk, sku, stok, kategoriId, kategoriNama, hargaBeli, hargaJual ->
+                    viewModel.addProduk(namaProduk, sku, stok, kategoriId, kategoriNama, hargaBeli, hargaJual)
+                },
+                onScanBarcode = {
+                    showQRScannerInBottomSheet = true
+                }
+            )
+        }
+    }
+
+    // QR Scanner dalam BottomSheet
+    if (showQRScannerInBottomSheet) {
+        QRScannerScreen(
+            onBarcodeScanned = { barcode ->
+                scannedBarcode = barcode
+                showQRScannerInBottomSheet = false
+            },
+            onDismiss = { showQRScannerInBottomSheet = false }
         )
     }
 
