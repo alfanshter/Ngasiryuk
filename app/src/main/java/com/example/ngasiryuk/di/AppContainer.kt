@@ -55,7 +55,8 @@ object AppContainer {
         transaksiRepository = TransaksiRepositoryImpl(
             database.transaksiDao(),
             database.detailTransaksiDao(),
-            database.produkDao()
+            database.produkDao(),
+            database.riwayatStokDao()
         )
         menuPasswordRepository = MenuPasswordRepository(database.menuPasswordDao())
     }
