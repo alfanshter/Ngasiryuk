@@ -10,6 +10,9 @@ interface TokoDao {
     @Query("SELECT * FROM toko LIMIT 1")
     fun getToko(): Flow<TokoEntity?>
 
+    @Query("SELECT * FROM toko LIMIT 1")
+    suspend fun getTokoEntity(): TokoEntity?
+
     @Query("SELECT * FROM toko WHERE id = :id")
     suspend fun getTokoById(id: Int): TokoEntity?
 

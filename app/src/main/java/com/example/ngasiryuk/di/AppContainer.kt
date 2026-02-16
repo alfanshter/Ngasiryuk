@@ -1,9 +1,11 @@
 package com.example.ngasiryuk.di
 
+import android.annotation.SuppressLint
 import android.content.Context
 import com.example.ngasiryuk.data.local.database.AppDatabase
 import com.example.ngasiryuk.data.repository.CustomerRepository
 import com.example.ngasiryuk.data.repository.CustomerRepositoryImpl
+import com.example.ngasiryuk.data.repository.DeviceRepository
 import com.example.ngasiryuk.data.repository.KasirRepository
 import com.example.ngasiryuk.data.repository.KasirRepositoryImpl
 import com.example.ngasiryuk.data.repository.KategoriRepositoryImpl
@@ -34,6 +36,7 @@ import com.example.ngasiryuk.viewmodel.MenuPasswordViewModel
 
 object AppContainer {
 
+    private lateinit var appContext: Context
     private lateinit var database: AppDatabase
     private lateinit var tokoRepository: TokoRepository
     private lateinit var kategoriRepository: KategoriRepository
@@ -43,9 +46,12 @@ object AppContainer {
     private lateinit var customerRepository: CustomerRepository
     private lateinit var transaksiRepository: TransaksiRepository
     private lateinit var menuPasswordRepository: MenuPasswordRepository
+    @SuppressLint("StaticFieldLeak") // Safe: using applicationContext
+    private lateinit var deviceRepository: DeviceRepository
 
     fun initialize(context: Context) {
-        database = AppDatabase.getDatabase(context)
+        appContext = context.applicationContext
+        database = AppDatabase.getDatabase(appContext)
         tokoRepository = TokoRepositoryImpl(database.tokoDao())
         kategoriRepository = KategoriRepositoryImpl(database.kategoriDao())
         produkRepository = ProdukRepositoryImpl(database.produkDao(), database.riwayatStokDao())
@@ -59,6 +65,11 @@ object AppContainer {
             database.riwayatStokDao()
         )
         menuPasswordRepository = MenuPasswordRepository(database.menuPasswordDao())
+        deviceRepository = DeviceRepository(
+            context = appContext,
+            deviceDao = database.deviceDao(),
+            tokoDao = database.tokoDao()
+        )
     }
 
     fun provideGetTokoUseCase(): GetTokoUseCase {
@@ -144,5 +155,9 @@ object AppContainer {
         return MenuPasswordViewModel(
             repository = menuPasswordRepository
         )
+    }
+
+    fun provideDeviceRepository(): DeviceRepository {
+        return deviceRepository
     }
 }

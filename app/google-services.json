@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "176872971426",
+    "project_id": "ngasiryuk",
+    "storage_bucket": "ngasiryuk.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:176872971426:android:fde9c93f80cd458873cbfb",
+        "android_client_info": {
+          "package_name": "com.example.ngasiryuk"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBiUCau4p4SKsWj4evUqW1_0zFJcLPO0kQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

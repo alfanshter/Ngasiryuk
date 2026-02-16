@@ -1,5 +1,6 @@
 package com.example.ngasiryuk.screen.menu.daftartoko
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ngasiryuk.domain.model.Toko
@@ -89,6 +90,8 @@ class DaftarTokoViewModel(
 
                 saveTokoUseCase(toko)
 
+                Log.d("DaftarTokoViewModel", "✅ Store saved successfully")
+
                 _state.update {
                     it.copy(
                         isLoading = false,
@@ -96,7 +99,9 @@ class DaftarTokoViewModel(
                         error = null
                     )
                 }
+
             } catch (e: Exception) {
+                Log.e("DaftarTokoViewModel", "❌ Failed to save store: ${e.message}", e)
                 _state.update {
                     it.copy(
                         isLoading = false,
@@ -134,6 +139,8 @@ class DaftarTokoViewModel(
 
                 updateTokoUseCase(toko)
 
+                Log.d("DaftarTokoViewModel", "✅ Store updated successfully")
+
                 _state.update {
                     it.copy(
                         isLoading = false,
@@ -141,7 +148,9 @@ class DaftarTokoViewModel(
                         error = null
                     )
                 }
+
             } catch (e: Exception) {
+                Log.e("DaftarTokoViewModel", "❌ Failed to update store: ${e.message}", e)
                 _state.update {
                     it.copy(
                         isLoading = false,

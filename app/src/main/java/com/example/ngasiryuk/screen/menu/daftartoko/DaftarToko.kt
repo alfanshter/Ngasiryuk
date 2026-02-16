@@ -42,9 +42,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -82,6 +80,23 @@ fun DaftarToko(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
+    // Handle save success - navigate to dashboard
+    LaunchedEffect(state.isSaveSuccess) {
+        if (state.isSaveSuccess) {
+            navController.navigate(AppScreen.Dashboard.route) {
+                popUpTo(AppScreen.DaftarToko.route) { inclusive = true }
+            }
+            viewModel.resetSaveSuccess()
+        }
+    }
+
+    // Show error message
+    LaunchedEffect(state.error) {
+        state.error?.let { error ->
+            snackbarHostState.showSnackbar(error)
+        }
+    }
+
     // Permission handling
     val (hasPermission, requestPermission) = rememberImagePermission(
         onPermissionGranted = {},
@@ -107,22 +122,6 @@ fun DaftarToko(
         }
     }
 
-    // Handle navigation when save is successful
-    LaunchedEffect(state.isSaveSuccess) {
-        if (state.isSaveSuccess) {
-            navController.navigate(AppScreen.Dashboard.route) {
-                popUpTo(AppScreen.DaftarToko.route) { inclusive = true }
-            }
-            viewModel.resetSaveSuccess()
-        }
-    }
-
-    // Show error message
-    LaunchedEffect(state.error) {
-        state.error?.let { error ->
-            snackbarHostState.showSnackbar(error)
-        }
-    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -222,10 +221,10 @@ fun DaftarToko(
                                         .background(Color(0xFFE8E8E8)),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    if (state.logoPath != null && File(state.logoPath).exists()) {
+                                    if (state.logoPath != null && File(state.logoPath!!).exists()) {
                                         // Show selected image
                                         AsyncImage(
-                                            model = File(state.logoPath),
+                                            model = File(state.logoPath!!),
                                             contentDescription = "Logo Toko",
                                             modifier = Modifier
                                                 .size(100.dp)

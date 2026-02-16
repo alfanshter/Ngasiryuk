@@ -32,8 +32,23 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
     }
 }
 
+// Migration from version 7 to 8 - Add Device table
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // Create device table
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS device (
+                deviceId TEXT PRIMARY KEY NOT NULL,
+                deviceName TEXT NOT NULL,
+                registeredAt INTEGER NOT NULL,
+                lastAccess INTEGER NOT NULL
+            )
+        """.trimIndent())
+    }
+}
+
 // Template untuk migration selanjutnya
-// val MIGRATION_7_8 = object : Migration(7, 8) {
+// val MIGRATION_8_9 = object : Migration(8, 9) {
 //     override fun migrate(database: SupportSQLiteDatabase) {
 //         // Add your migration code here
 //     }
