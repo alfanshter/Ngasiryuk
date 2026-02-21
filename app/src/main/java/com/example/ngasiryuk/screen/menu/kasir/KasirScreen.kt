@@ -1,16 +1,18 @@
 package com.example.ngasiryuk.screen.menu.kasir
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -21,6 +23,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
@@ -46,6 +49,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -69,7 +73,6 @@ import com.example.ngasiryuk.di.AppContainer
 import com.example.ngasiryuk.screen.component.PasswordProtectedScreen
 import com.example.ngasiryuk.screen.component.dialog.TambahCustomerDialog
 import com.example.ngasiryuk.screen.component.dialog.TambahKasirDialog
-import com.example.ngasiryuk.screen.component.bottomsheet.TambahKeranjangBottomSheet
 import com.example.ngasiryuk.utils.MenuConstants
 import kotlinx.coroutines.launch
 
@@ -110,7 +113,6 @@ private fun KasirScreenContent(
     val kasirList by viewModel.kasirList.collectAsState()
     val customerList by viewModel.customerList.collectAsState()
     val produkList by viewModel.produkList.collectAsState()
-    val kategoriList by viewModel.kategoriList.collectAsState()
     val selectedKasir by viewModel.selectedKasir.collectAsState()
     val selectedCustomer by viewModel.selectedCustomer.collectAsState()
     val keranjangItems by viewModel.keranjangItems.collectAsState()
@@ -142,15 +144,38 @@ private fun KasirScreenContent(
     var expandedPelanggan by remember { mutableStateOf(false) }
     var showTambahCustomerDialog by remember { mutableStateOf(false) }
     var showTambahKasirDialog by remember { mutableStateOf(false) }
-    var showTambahKeranjangBottomSheet by remember { mutableStateOf(false) }
-    var showQRScannerInBottomSheet by remember { mutableStateOf(false) }
     var showQRScanner by remember { mutableStateOf(false) }
     var showPembayaranBottomSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val keranjangSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // State untuk form tambah produk (langsung di halaman)
+    var showDropdown by remember { mutableStateOf(false) }
+    var selectedProduk by remember { mutableStateOf<com.example.ngasiryuk.data.local.entity.ProdukEntity?>(null) }
+    var namaProduk by remember { mutableStateOf("") }
+    var skuBarcode by remember { mutableStateOf("") }
+    var hargaJual by remember { mutableStateOf("") }
+    var jumlah by remember { mutableIntStateOf(1) }
 
     // State untuk menyimpan barcode dari scanner
     var scannedBarcode by remember { mutableStateOf("") }
+
+    // Isi SKU dari hasil scan barcode
+    LaunchedEffect(scannedBarcode) {
+        if (scannedBarcode.isNotEmpty()) {
+            skuBarcode = scannedBarcode
+        }
+    }
+
+    // Filtered produk untuk autocomplete
+    val filteredProduk = remember(namaProduk, produkList) {
+        if (namaProduk.isEmpty()) {
+            emptyList()
+        } else {
+            produkList.filter {
+                it.namaProduk.contains(namaProduk, ignoreCase = true)
+            }.take(5)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -457,60 +482,378 @@ private fun KasirScreenContent(
                     }
 
                     item {
-                        // Tombol Scan Produk
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
+                    // Form Tambah Produk (langsung di halaman)
+                    item {
+                        // Nama Produk dengan Autocomplete
+                        ExposedDropdownMenuBox(
+                            expanded = showDropdown && filteredProduk.isNotEmpty(),
+                            onExpandedChange = { },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 12.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = namaProduk,
+                                onValueChange = {
+                                    namaProduk = it
+                                    showDropdown = it.isNotEmpty()
+
+                                    if (selectedProduk != null && selectedProduk!!.namaProduk != it) {
+                                        selectedProduk = null
+                                    }
+                                },
+                                placeholder = {
+                                    Text(
+                                        "Nama Produk",
+                                        color = Color.Gray,
+                                        fontFamily = plusjakarta,
+                                        fontSize = 14.sp
+                                    )
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .menuAnchor(androidx.compose.material3.MenuAnchorType.PrimaryNotEditable),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = Color.Black,
+                                    unfocusedTextColor = Color.Black,
+                                    cursorColor = Color.Black,
+                                    unfocusedBorderColor = Color(0xFFE0E0E0),
+                                    focusedBorderColor = Color(0xFFFDB913),
+                                    unfocusedContainerColor = Color(0xFFF5F5F5),
+                                    focusedContainerColor = Color(0xFFF5F5F5)
+                                )
+                            )
+
+                            // Dropdown autocomplete
+                            ExposedDropdownMenu(
+                                expanded = showDropdown && filteredProduk.isNotEmpty(),
+                                onDismissRequest = { showDropdown = false },
+                                modifier = Modifier.heightIn(max = 200.dp)
+                            ) {
+                                filteredProduk.forEach { produk ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Column {
+                                                Text(
+                                                    text = produk.namaProduk,
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = Color.Black,
+                                                    fontFamily = plusjakarta
+                                                )
+                                                Text(
+                                                    text = "Stok: ${produk.stok} | Rp ${produk.hargaJual.toInt()}",
+                                                    fontSize = 11.sp,
+                                                    color = Color.Gray,
+                                                    fontFamily = plusjakarta
+                                                )
+                                            }
+                                        },
+                                        onClick = {
+                                            selectedProduk = produk
+                                            namaProduk = produk.namaProduk
+                                            skuBarcode = produk.sku
+                                            hargaJual = produk.hargaJual.toInt().toString()
+                                            showDropdown = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    item {
+                        // Info jika produk ditemukan
+                        if (selectedProduk != null) {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 12.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (selectedProduk!!.stok > 0) Color(0xFFE8F5E9) else Color(0xFFFFF3E0)
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = "Found",
+                                        tint = if (selectedProduk!!.stok > 0) Color(0xFF4CAF50) else Color(0xFFFF9800),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Column {
+                                        Text(
+                                            text = if (selectedProduk!!.stok > 0) {
+                                                "Produk ditemukan - Stok: ${selectedProduk!!.stok}"
+                                            } else {
+                                                "Produk ditemukan - Stok belum diinput"
+                                            },
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = if (selectedProduk!!.stok > 0) Color(0xFF2E7D32) else Color(0xFFE65100),
+                                            fontFamily = plusjakarta
+                                        )
+                                        if (selectedProduk!!.stok == 0) {
+                                            Text(
+                                                text = "Tetap bisa dijual, update stok di Manajemen Stok",
+                                                fontSize = 10.sp,
+                                                color = Color(0xFFE65100),
+                                                fontFamily = plusjakarta
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    item {
+                        // SKU/Kode Barcode dengan tombol scan (OPSIONAL)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            OutlinedTextField(
+                                value = skuBarcode,
+                                onValueChange = { skuBarcode = it },
+                                placeholder = {
+                                    Text(
+                                        "SKU/Kode Barcode (Opsional)",
+                                        color = Color.Gray,
+                                        fontFamily = plusjakarta,
+                                        fontSize = 14.sp
+                                    )
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = Color.Black,
+                                    unfocusedTextColor = Color.Black,
+                                    cursorColor = Color.Black,
+                                    unfocusedBorderColor = Color(0xFFE0E0E0),
+                                    focusedBorderColor = Color(0xFFFDB913),
+                                    unfocusedContainerColor = Color(0xFFF5F5F5),
+                                    focusedContainerColor = Color(0xFFF5F5F5)
+                                )
+                            )
+
+                            // Tombol Scan QR
+                            IconButton(
+                                onClick = { showQRScanner = true },
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .background(
+                                        color = Color(0xFFFDB913),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.qrcode),
+                                    contentDescription = "Scan QR",
+                                    tint = Color.Black,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    item {
+                        // Harga Jual
+                        OutlinedTextField(
+                            value = hargaJual,
+                            onValueChange = { hargaJual = it },
+                            placeholder = {
+                                Text(
+                                    "Harga Jual",
+                                    color = Color.Gray,
+                                    fontFamily = plusjakarta,
+                                    fontSize = 14.sp
+                                )
+                            },
+                            leadingIcon = {
+                                Text(
+                                    "Rp",
+                                    color = Color.Gray,
+                                    fontFamily = plusjakarta,
+                                    fontSize = 14.sp
+                                )
+                            },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 12.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color.Black,
+                                unfocusedTextColor = Color.Black,
+                                cursorColor = Color.Black,
+                                unfocusedBorderColor = Color(0xFFE0E0E0),
+                                focusedBorderColor = Color(0xFFFDB913),
+                                unfocusedContainerColor = Color(0xFFF5F5F5),
+                                focusedContainerColor = Color(0xFFF5F5F5)
+                            )
+                        )
+                    }
+
+                    item {
+                        // Jumlah Section
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Jumlah",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.Black,
+                                fontFamily = plusjakarta
+                            )
+
+                            // Counter Controls
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                // Minus Button
+                                IconButton(
+                                    onClick = {
+                                        if (jumlah > 1) jumlah--
+                                    },
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .background(
+                                            color = Color(0xFFFFEBEE),
+                                            shape = CircleShape
+                                        )
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.minus),
+                                        contentDescription = "Minus",
+                                        tint = Color(0xFFFF5252),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+
+                                // Jumlah Display
+                                Text(
+                                    text = jumlah.toString(),
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.Black,
+                                    fontFamily = plusjakarta,
+                                    modifier = Modifier.widthIn(min = 30.dp),
+                                    textAlign = TextAlign.Center
+                                )
+
+                                // Plus Button
+                                IconButton(
+                                    onClick = {
+                                        if (selectedProduk != null) {
+                                            if (selectedProduk!!.stok > 0) {
+                                                if (jumlah < selectedProduk!!.stok) jumlah++
+                                            } else {
+                                                jumlah++
+                                            }
+                                        } else {
+                                            jumlah++
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .background(
+                                            color = Color(0xFFFDB913),
+                                            shape = CircleShape
+                                        )
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "Plus",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    item {
+                        // Tombol Simpan ke Keranjang
                         Button(
-                            onClick = { showQRScanner = true },
+                            onClick = {
+                                val isFormValid = namaProduk.isNotEmpty() && hargaJual.isNotEmpty()
+
+                                if (isFormValid) {
+                                    if (selectedProduk != null) {
+                                        val produkCustom = selectedProduk!!.copy(
+                                            hargaJual = hargaJual.toDoubleOrNull() ?: selectedProduk!!.hargaJual
+                                        )
+                                        viewModel.addToKeranjang(produkCustom, jumlah)
+                                    } else {
+                                        viewModel.addProduk(
+                                            namaProduk,
+                                            skuBarcode.ifEmpty { "-" },
+                                            0,
+                                            1,
+                                            "Umum",
+                                            0.0,
+                                            hargaJual.toDoubleOrNull() ?: 0.0
+                                        )
+
+                                        val produkBaru = com.example.ngasiryuk.data.local.entity.ProdukEntity(
+                                            id = 0,
+                                            namaProduk = namaProduk,
+                                            sku = skuBarcode.ifEmpty { "-" },
+                                            stok = 0,
+                                            kategoriId = 1,
+                                            kategoriNama = "Umum",
+                                            hargaBeli = 0.0,
+                                            hargaJual = hargaJual.toDoubleOrNull() ?: 0.0
+                                        )
+                                        viewModel.addToKeranjang(produkBaru, jumlah)
+                                    }
+
+                                    // Reset form
+                                    namaProduk = ""
+                                    skuBarcode = ""
+                                    hargaJual = ""
+                                    jumlah = 1
+                                    selectedProduk = null
+                                    scannedBarcode = ""
+                                }
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(50.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color(0xFFFDB913)
                             ),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.qrcode),
-                                contentDescription = "Scan",
-                                tint = Color.Black
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Scan Produk",
-                                color = Color.Black,
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = plusjakarta,
-                                fontSize = 16.sp
-                            )
-                        }
-                    }
-
-                    item {
-                        Spacer(modifier = Modifier.height(12.dp))
-                    }
-
-                    item {
-                        // Tombol Tambah Keranjang
-                        OutlinedButton(
-                            onClick = { showTambahKeranjangBottomSheet = true },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(50.dp),
                             shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, Color(0xFFE0E0E0)),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = Color(0xFFF5F5F5)
-                            )
+                            enabled = namaProduk.isNotEmpty() && hargaJual.isNotEmpty()
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = "Add",
-                                tint = Color.Gray
+                                tint = Color.Black
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Tambah Keranjang",
-                                color = Color.Gray,
-                                fontWeight = FontWeight.Medium,
+                                text = "Tambah ke Keranjang",
+                                color = Color.Black,
+                                fontWeight = FontWeight.Bold,
                                 fontFamily = plusjakarta,
                                 fontSize = 16.sp
                             )
@@ -566,7 +909,20 @@ private fun KasirScreenContent(
                         val item = keranjangItems[index]
                         KeranjangItemCard(
                             item = item,
-                            onEdit = { /* Handle edit */ },
+                            onEdit = {
+                                // Isi form dengan data dari keranjang item
+                                namaProduk = item.nama
+                                skuBarcode = item.sku
+                                hargaJual = item.harga.toString()
+                                jumlah = item.jumlah
+
+                                // Cari produk asli dari database untuk set selectedProduk
+                                val produkAsli = produkList.find { it.id == item.produkId }
+                                selectedProduk = produkAsli
+
+                                // Hapus item dari keranjang sementara
+                                viewModel.removeFromKeranjang(index)
+                            },
                             onPlus = {
                                 viewModel.updateKeranjangItemJumlah(index, item.jumlah + 1)
                             },
@@ -637,76 +993,18 @@ private fun KasirScreenContent(
         )
     }
 
-    // BottomSheet Tambah Ke Keranjang
-    if (showTambahKeranjangBottomSheet && !showQRScannerInBottomSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showTambahKeranjangBottomSheet = false },
-            sheetState = keranjangSheetState,
-            containerColor = Color.White,
-            dragHandle = {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 12.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .width(40.dp)
-                            .height(4.dp)
-                            .background(
-                                color = Color.LightGray,
-                                shape = RoundedCornerShape(2.dp)
-                            )
-                    )
-                }
-            }
-        ) {
-            TambahKeranjangBottomSheet(
-                produkList = produkList,
-                kategoriList = kategoriList,
-                scannedBarcode = scannedBarcode,
-                onDismiss = {
-                    showTambahKeranjangBottomSheet = false
-                    scannedBarcode = "" // Reset barcode
-                },
-                onSave = { produk, jumlah ->
-                    viewModel.addToKeranjang(produk, jumlah)
-                    showTambahKeranjangBottomSheet = false
-                    scannedBarcode = "" // Reset barcode
-                },
-                onAddProduk = { namaProduk, sku, stok, kategoriId, kategoriNama, hargaBeli, hargaJual ->
-                    viewModel.addProduk(namaProduk, sku, stok, kategoriId, kategoriNama, hargaBeli, hargaJual)
-                },
-                onScanBarcode = {
-                    showQRScannerInBottomSheet = true
-                }
-            )
-        }
-    }
-
-    // QR Scanner dalam BottomSheet
-    if (showQRScannerInBottomSheet) {
-        QRScannerScreen(
-            onBarcodeScanned = { barcode ->
-                scannedBarcode = barcode
-                showQRScannerInBottomSheet = false
-            },
-            onDismiss = { showQRScannerInBottomSheet = false }
-        )
-    }
-
     // QR Scanner Screen
     if (showQRScanner) {
         QRScannerScreen(
             onBarcodeScanned = { barcode ->
                 showQRScanner = false
+                scannedBarcode = barcode
                 val produk = viewModel.getProdukByBarcode(barcode)
                 if (produk != null) {
-                    viewModel.addToKeranjang(produk, 1)
-                    // TODO: Bisa tambahkan snackbar/toast untuk notifikasi sukses
-                } else {
-                    // TODO: Bisa tambahkan snackbar/toast untuk notifikasi produk tidak ditemukan
+                    selectedProduk = produk
+                    namaProduk = produk.namaProduk
+                    skuBarcode = produk.sku
+                    hargaJual = produk.hargaJual.toInt().toString()
                 }
             },
             onDismiss = { showQRScanner = false }
@@ -1139,60 +1437,96 @@ fun KeranjangItemCard(
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(12.dp)
         ) {
-            // Info Produk
-            Column(
-                modifier = Modifier.weight(1f)
+            // Row pertama: Info Produk
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
             ) {
-                Text(
-                    text = item.nama,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black,
-                    fontFamily = plusjakarta
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "SKU : ${item.sku}",
-                    fontSize = 11.sp,
-                    color = Color.Gray,
-                    fontFamily = plusjakarta
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Row {
+                // Info Produk
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
                     Text(
-                        text = "1 x Rp ${"%,d".format(item.harga)}",
-                        fontSize = 11.sp,
-                        color = Color.Gray,
-                        fontFamily = plusjakarta
-                    )
-                    Text(
-                        text = " = ",
-                        fontSize = 11.sp,
-                        color = Color.Gray,
-                        fontFamily = plusjakarta
-                    )
-                    Text(
-                        text = "Rp ${"%,d".format(item.harga * item.jumlah)}",
-                        fontSize = 11.sp,
-                        color = Color(0xFF4CAF50),
+                        text = item.nama,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
+                        color = Color.Black,
                         fontFamily = plusjakarta
                     )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "SKU : ${item.sku}",
+                        fontSize = 11.sp,
+                        color = Color.Gray,
+                        fontFamily = plusjakarta
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Row {
+                        Text(
+                            text = "1 x Rp ${"%,d".format(item.harga)}",
+                            fontSize = 11.sp,
+                            color = Color.Gray,
+                            fontFamily = plusjakarta
+                        )
+                        Text(
+                            text = " = ",
+                            fontSize = 11.sp,
+                            color = Color.Gray,
+                            fontFamily = plusjakarta
+                        )
+                        Text(
+                            text = "Rp ${"%,d".format(item.harga * item.jumlah)}",
+                            fontSize = 11.sp,
+                            color = Color(0xFF4CAF50),
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = plusjakarta
+                        )
+                    }
                 }
             }
 
-            // Edit Button dan Quantity Controls
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Row kedua: Edit Button dan Quantity Controls (separated for better spacing)
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                // Edit Button
+                OutlinedButton(
+                    onClick = onEdit,
+                    modifier = Modifier
+                        .height(36.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = Color(0xFFE3F2FD),
+                        contentColor = Color(0xFF2196F3)
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF90CAF9)),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Edit",
+                        tint = Color(0xFF2196F3),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Edit",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        fontFamily = plusjakarta,
+                        color = Color(0xFF2196F3)
+                    )
+                }
 
                 // Quantity Controls
                 Row(
@@ -1203,7 +1537,7 @@ fun KeranjangItemCard(
                             color = Color(0xFFF5F5F5),
                             shape = RoundedCornerShape(8.dp)
                         )
-                        .padding(4.dp)
+                        .padding(6.dp)
                 ) {
                     // Plus Button
                     IconButton(
