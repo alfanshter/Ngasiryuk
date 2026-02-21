@@ -68,6 +68,10 @@ class KasirViewModel(
     private val _successMessage = MutableStateFlow<String?>(null)
     val successMessage: StateFlow<String?> = _successMessage.asStateFlow()
 
+    // Data transaksi terakhir untuk cetak struk
+    private val _lastTransactionData = MutableStateFlow<TransactionReceiptData?>(null)
+    val lastTransactionData: StateFlow<TransactionReceiptData?> = _lastTransactionData.asStateFlow()
+
     init {
         loadData()
     }
@@ -259,6 +263,22 @@ class KasirViewModel(
             // Simpan transaksi dengan details
             transaksiRepository.insertTransaksiWithDetails(transaksi, details)
 
+            // Simpan data untuk cetak struk
+            _lastTransactionData.value = TransactionReceiptData(
+                namaKasir = _selectedKasir.value!!.namaKasir,
+                namaCustomer = _selectedCustomer.value?.nama,
+                items = _keranjangItems.value.map {
+                    ReceiptItemData(it.nama, it.jumlah, it.harga)
+                },
+                subtotal = totalBelanja,
+                diskon = totalBelanja * diskon / 100,
+                total = totalSetelahDiskon,
+                uangDibayar = uangDibayarkan,
+                kembalian = kembalian,
+                metodePembayaran = metodePembayaran,
+                keterangan = keterangan
+            )
+
             // Clear keranjang dan reset state
             clearKeranjang()
             _selectedCustomer.value = null
@@ -335,6 +355,26 @@ data class KeranjangItem(
     val harga: Int,
     val jumlah: Int,
     val stok: Int
+)
+
+// Data class untuk data struk
+data class TransactionReceiptData(
+    val namaKasir: String,
+    val namaCustomer: String?,
+    val items: List<ReceiptItemData>,
+    val subtotal: Int,
+    val diskon: Int,
+    val total: Int,
+    val uangDibayar: Int,
+    val kembalian: Int,
+    val metodePembayaran: String,
+    val keterangan: String?
+)
+
+data class ReceiptItemData(
+    val nama: String,
+    val jumlah: Int,
+    val harga: Int
 )
 
 

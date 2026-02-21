@@ -100,4 +100,7 @@ dependencies {
 
     // Accompanist Permissions
     implementation("com.google.accompanist:accompanist-permissions:0.32.0")
+
+    // Bluetooth Thermal Printer
+    implementation("com.github.DantSu:ESCPOS-ThermalPrinter-Android:3.3.0")
 }

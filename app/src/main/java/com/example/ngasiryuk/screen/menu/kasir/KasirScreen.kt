@@ -1,5 +1,10 @@
 package com.example.ngasiryuk.screen.menu.kasir
 
+import android.Manifest
+import android.bluetooth.BluetoothDevice
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
@@ -17,6 +22,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -71,10 +78,15 @@ import com.example.galonqu.commond.plusjakarta
 import com.example.ngasiryuk.R
 import com.example.ngasiryuk.di.AppContainer
 import com.example.ngasiryuk.screen.component.PasswordProtectedScreen
+import com.example.ngasiryuk.screen.component.dialog.SelectPrinterDialog
 import com.example.ngasiryuk.screen.component.dialog.TambahCustomerDialog
 import com.example.ngasiryuk.screen.component.dialog.TambahKasirDialog
 import com.example.ngasiryuk.utils.MenuConstants
+import com.example.ngasiryuk.utils.ThermalPrinterHelper
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -119,9 +131,45 @@ private fun KasirScreenContent(
     val totalTransaksi by viewModel.totalTransaksi.collectAsState()
     val successMessage by viewModel.successMessage.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val lastTransactionData by viewModel.lastTransactionData.collectAsState()
 
     // Context untuk Toast
     val context = androidx.compose.ui.platform.LocalContext.current
+
+    // Printer helper
+    val printerHelper = remember { ThermalPrinterHelper(context) }
+
+    // Bluetooth permission launcher
+    val bluetoothPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val allGranted = permissions.values.all { it }
+        if (allGranted) {
+            android.widget.Toast.makeText(
+                context,
+                "Izin Bluetooth diberikan",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+        } else {
+            android.widget.Toast.makeText(
+                context,
+                "Izin Bluetooth diperlukan untuk mencetak struk",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    // Request Bluetooth permissions saat pertama kali
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            bluetoothPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.BLUETOOTH_CONNECT,
+                    Manifest.permission.BLUETOOTH_SCAN
+                )
+            )
+        }
+    }
 
     // Handle success message dengan Toast
     LaunchedEffect(successMessage) {
@@ -1052,7 +1100,10 @@ private fun KasirScreenContent(
                             showPembayaranBottomSheet = false
                         }
                     }
-                }
+                },
+                printerHelper = printerHelper,
+                lastTransactionData = lastTransactionData,
+                context = context
             )
         }
     }
@@ -1063,13 +1114,17 @@ private fun KasirScreenContent(
 fun PembayaranBottomSheetContent(
     totalTagihan: Int,
     onDismiss: () -> Unit,
-    onSimpan: (diskon: Int, uangDibayarkan: Int, metodePembayaran: String, keterangan: String?) -> Unit
+    onSimpan: (diskon: Int, uangDibayarkan: Int, metodePembayaran: String, keterangan: String?) -> Unit,
+    printerHelper: ThermalPrinterHelper,
+    lastTransactionData: TransactionReceiptData?,
+    context: android.content.Context
 ) {
     var diskon by remember { mutableStateOf("") }
     var uangDibayarkan by remember { mutableStateOf("") }
     var metodePembayaran by remember { mutableStateOf("Tunai") }
     var expandedMetode by remember { mutableStateOf(false) }
     var keterangan by remember { mutableStateOf("") }
+    var showPrinterDialog by remember { mutableStateOf(false) }
 
     // Perhitungan
     val diskonValue = diskon.toIntOrNull() ?: 0
@@ -1080,33 +1135,34 @@ fun PembayaranBottomSheetContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(24.dp)
-            .padding(bottom = 16.dp)
+            .heightIn(max = 700.dp)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
-        // Total Tagihan
+        // Total Tagihan - lebih kompak
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = "TOTAL TAGIHAN",
-                fontSize = 14.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 color = Color.Gray,
                 fontFamily = plusjakarta,
                 letterSpacing = 1.sp
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "Rp ${"%,d".format(totalTagihan)}",
-                fontSize = 32.sp,
+                fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF4CAF50),
                 fontFamily = plusjakarta
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Diskon Section dengan Input
         Column(
@@ -1159,21 +1215,13 @@ fun PembayaranBottomSheetContent(
             )
         }
 
-        // Divider
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(Color(0xFFE0E0E0))
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Uang Yang Dibayarkan dengan Input
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
+                .padding(bottom = 12.dp)
         )
         {
             Text(
@@ -1229,7 +1277,9 @@ fun PembayaranBottomSheetContent(
             )
         }
 
-        // Kembalian Section
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Kembalian Section - lebih kompak
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1237,7 +1287,7 @@ fun PembayaranBottomSheetContent(
                     color = Color(0xFFFFF9E6),
                     shape = RoundedCornerShape(12.dp)
                 )
-                .padding(16.dp),
+                .padding(12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -1248,7 +1298,7 @@ fun PembayaranBottomSheetContent(
                     painter = painterResource(R.drawable.bayar),
                     contentDescription = "Kembalian",
                     tint = Color(0xFFFBC020),
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
@@ -1268,7 +1318,7 @@ fun PembayaranBottomSheetContent(
             )
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Metode Pembayaran
         Text(
@@ -1333,16 +1383,16 @@ fun PembayaranBottomSheetContent(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // Keterangan
+        // Keterangan - lebih kompak
         Text(
             text = "Keterangan (optional)",
-            fontSize = 14.sp,
+            fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
             color = Color.Black,
             fontFamily = plusjakarta,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = 6.dp)
         )
 
         OutlinedTextField(
@@ -1350,7 +1400,7 @@ fun PembayaranBottomSheetContent(
             onValueChange = { keterangan = it },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 24.dp),
+                .padding(bottom = 12.dp),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = Color.Black,
@@ -1361,9 +1411,69 @@ fun PembayaranBottomSheetContent(
                 unfocusedContainerColor = Color(0xFFF5F5F5),
                 focusedContainerColor = Color(0xFFF5F5F5)
             ),
-            minLines = 3,
-            maxLines = 4
+            minLines = 2,
+            maxLines = 3
         )
+
+        // Tombol Cetak Struk - selalu aktif, bisa cetak sebelum atau sesudah simpan
+        OutlinedButton(
+            onClick = {
+                if (printerHelper.isBluetoothAvailable()) {
+                    // Jika belum ada transaksi, validasi input dulu
+                    if (lastTransactionData == null) {
+                        if (uangDibayarkanValue < totalSetelahDiskon) {
+                            android.widget.Toast.makeText(
+                                context,
+                                "Uang yang dibayarkan kurang dari total",
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                        } else {
+                            // Simpan transaksi dulu, baru cetak
+                            onSimpan(diskonValue, uangDibayarkanValue, metodePembayaran, keterangan.ifBlank { null })
+                            // Tunggu sebentar untuk data tersimpan, lalu buka dialog printer
+                            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                                kotlinx.coroutines.delay(500) // Delay 500ms
+                                showPrinterDialog = true
+                            }
+                        }
+                    } else {
+                        // Sudah ada transaksi, langsung cetak
+                        showPrinterDialog = true
+                    }
+                } else {
+                    android.widget.Toast.makeText(
+                        context,
+                        "Bluetooth tidak tersedia atau tidak aktif",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .padding(bottom = 12.dp),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, Color(0xFFFDB913)),
+            colors = ButtonDefaults.outlinedButtonColors(
+                containerColor = Color.White,
+                contentColor = Color(0xFFFDB913)
+            )
+        ) {
+            Icon(
+                imageVector = Icons.Default.CheckCircle,
+                contentDescription = "Print",
+                tint = Color(0xFFFDB913),
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = if (lastTransactionData != null) "Cetak Struk" else "Simpan & Cetak Struk",
+                color = Color(0xFFFDB913),
+                fontWeight = FontWeight.SemiBold,
+                fontFamily = plusjakarta,
+                fontSize = 16.sp
+            )
+        }
 
         // Buttons
         Row(
@@ -1375,7 +1485,7 @@ fun PembayaranBottomSheetContent(
                 onClick = onDismiss,
                 modifier = Modifier
                     .weight(1f)
-                    .height(50.dp),
+                    .height(48.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFFF5F5F5)
                 ),
@@ -1386,7 +1496,7 @@ fun PembayaranBottomSheetContent(
                     color = Color.Black,
                     fontWeight = FontWeight.SemiBold,
                     fontFamily = plusjakarta,
-                    fontSize = 16.sp
+                    fontSize = 15.sp
                 )
             }
 
@@ -1402,7 +1512,7 @@ fun PembayaranBottomSheetContent(
                 },
                 modifier = Modifier
                     .weight(1f)
-                    .height(50.dp),
+                    .height(48.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFFFDB913)
                 ),
@@ -1414,15 +1524,56 @@ fun PembayaranBottomSheetContent(
                     color = Color.Black,
                     fontWeight = FontWeight.Bold,
                     fontFamily = plusjakarta,
-                    fontSize = 16.sp
+                    fontSize = 15.sp
                 )
             }
         }
+
+        // Padding bawah untuk scrolling yang lebih nyaman
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+
+    // Dialog Pilih Printer - di luar Column agar tidak ikut scroll
+    if (showPrinterDialog) {
+        val printers = printerHelper.getPairedPrinters()
+
+        SelectPrinterDialog(
+            printers = printers,
+            onDismiss = { showPrinterDialog = false },
+            onPrinterSelected = { printer ->
+                showPrinterDialog = false
+                // Cetak struk
+                lastTransactionData?.let { data ->
+                    printReceipt(
+                        printerHelper = printerHelper,
+                        printer = printer,
+                        transactionData = data,
+                        context = context
+                    )
+                }
+            },
+            onTestPrint = { printer ->
+                printerHelper.testPrint(
+                    printerDevice = printer,
+                    onSuccess = {
+                        android.widget.Toast.makeText(
+                            context,
+                            "Test print berhasil",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    },
+                    onError = { error ->
+                        android.widget.Toast.makeText(
+                            context,
+                            "Test print gagal: $error",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                    }
+                )
+            }
+        )
     }
 }
-
-
-
 
 @Composable
 fun KeranjangItemCard(
@@ -1509,8 +1660,8 @@ fun KeranjangItemCard(
                         containerColor = Color(0xFFE3F2FD),
                         contentColor = Color(0xFF2196F3)
                     ),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF90CAF9)),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp)
+                    border = BorderStroke(1.dp, Color(0xFF90CAF9)),
+                    contentPadding = PaddingValues(horizontal = 12.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Edit,
@@ -1581,6 +1732,66 @@ fun KeranjangItemCard(
             }
         }
     }
+}
+
+// Helper function untuk mencetak struk
+private fun printReceipt(
+    printerHelper: ThermalPrinterHelper,
+    printer: BluetoothDevice,
+    transactionData: TransactionReceiptData,
+    context: android.content.Context
+) {
+    // Hardcoded info toko (bisa diganti dengan data dari database)
+    val namaUsaha = "Ngasiryuk Store"
+    val alamatUsaha = "Jl. Contoh No. 123"
+    val teleponUsaha = "081234567890"
+
+    // Generate nomor transaksi
+    val localeID = Locale("in", "ID")
+    val dateFormat = SimpleDateFormat("yyMMddHHmmss", localeID)
+    val noTransaksi = "TRX-${dateFormat.format(Date())}"
+
+    // Convert data
+    val items = transactionData.items.map { item ->
+        ThermalPrinterHelper.ReceiptItem(
+            nama = item.nama,
+            jumlah = item.jumlah,
+            harga = item.harga
+        )
+    }
+
+    printerHelper.printReceipt(
+        printerDevice = printer,
+        namaUsaha = namaUsaha,
+        alamatUsaha = alamatUsaha,
+        teleponUsaha = teleponUsaha,
+        noTransaksi = noTransaksi,
+        tanggal = Date(),
+        namaKasir = transactionData.namaKasir,
+        namaCustomer = transactionData.namaCustomer,
+        items = items,
+        subtotal = transactionData.subtotal,
+        diskon = transactionData.diskon,
+        total = transactionData.total,
+        uangDibayar = transactionData.uangDibayar,
+        kembalian = transactionData.kembalian,
+        metodePembayaran = transactionData.metodePembayaran,
+        keterangan = transactionData.keterangan,
+        onSuccess = {
+            android.widget.Toast.makeText(
+                context,
+                "Struk berhasil dicetak",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+        },
+        onError = { error ->
+            android.widget.Toast.makeText(
+                context,
+                "Gagal mencetak struk: $error",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+        }
+    )
 }
 
 @Preview(showBackground = true)
