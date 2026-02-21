@@ -2,7 +2,6 @@ package com.example.ngasiryuk.screen.component.bottomsheet
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,7 +26,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -68,18 +66,13 @@ fun TambahKeranjangBottomSheet(
     var showDropdown by remember { mutableStateOf(false) }
     var selectedProduk by remember { mutableStateOf<ProdukEntity?>(null) }
 
-    // State untuk form
+    // State untuk form - Di kasir hanya butuh: Nama & Harga Jual
     var namaProduk by remember { mutableStateOf("") }
     var skuBarcode by remember { mutableStateOf("") }
-    var stok by remember { mutableStateOf("") }
-    var kategori by remember { mutableStateOf("") }
-    var selectedKategoriId by remember { mutableIntStateOf(0) }
-    var hargaBeli by remember { mutableStateOf("") }
     var hargaJual by remember { mutableStateOf("") }
     var jumlah by remember { mutableIntStateOf(1) }
-    var expandedKategori by remember { mutableStateOf(false) }
 
-    // Isi SKU dari hasil scan barcode
+    // Isi SKU dari hasil scan barcode (opsional)
     LaunchedEffect(scannedBarcode) {
         if (scannedBarcode.isNotEmpty()) {
             skuBarcode = scannedBarcode
@@ -134,7 +127,7 @@ fun TambahKeranjangBottomSheet(
                         onValueChange = {
                             namaProduk = it
                             showDropdown = it.isNotEmpty()
-                            // Reset jika user mengubah nama
+
                             if (selectedProduk != null && selectedProduk!!.namaProduk != it) {
                                 selectedProduk = null
                             }
@@ -152,6 +145,10 @@ fun TambahKeranjangBottomSheet(
                             .menuAnchor(androidx.compose.material3.MenuAnchorType.PrimaryNotEditable),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.Black,
+                            cursorColor = Color.Black,
+
                             unfocusedBorderColor = Color(0xFFE0E0E0),
                             focusedBorderColor = Color(0xFFFDB913),
                             unfocusedContainerColor = Color(0xFFF5F5F5),
@@ -177,7 +174,7 @@ fun TambahKeranjangBottomSheet(
                                             fontFamily = plusjakarta
                                         )
                                         Text(
-                                            text = "Stok: ${produk.stok} | ${produk.kategoriNama}",
+                                            text = "Stok: ${produk.stok} | Rp ${produk.hargaJual.toInt()}",
                                             fontSize = 11.sp,
                                             color = Color.Gray,
                                             fontFamily = plusjakarta
@@ -188,10 +185,6 @@ fun TambahKeranjangBottomSheet(
                                     selectedProduk = produk
                                     namaProduk = produk.namaProduk
                                     skuBarcode = produk.sku
-                                    stok = produk.stok.toString()
-                                    kategori = produk.kategoriNama
-                                    selectedKategoriId = produk.kategoriId
-                                    hargaBeli = produk.hargaBeli.toInt().toString()
                                     hargaJual = produk.hargaJual.toInt().toString()
                                     showDropdown = false
                                 }
@@ -208,7 +201,9 @@ fun TambahKeranjangBottomSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 12.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (selectedProduk!!.stok > 0) Color(0xFFE8F5E9) else Color(0xFFFFF3E0)
+                        ),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Row(
@@ -218,24 +213,38 @@ fun TambahKeranjangBottomSheet(
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = "Found",
-                                tint = Color(0xFF4CAF50),
+                                tint = if (selectedProduk!!.stok > 0) Color(0xFF4CAF50) else Color(0xFFFF9800),
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Produk ditemukan - Harga bisa disesuaikan",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color(0xFF2E7D32),
-                                fontFamily = plusjakarta
-                            )
+                            Column {
+                                Text(
+                                    text = if (selectedProduk!!.stok > 0) {
+                                        "Produk ditemukan - Stok: ${selectedProduk!!.stok}"
+                                    } else {
+                                        "Produk ditemukan - Stok belum diinput"
+                                    },
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = if (selectedProduk!!.stok > 0) Color(0xFF2E7D32) else Color(0xFFE65100),
+                                    fontFamily = plusjakarta
+                                )
+                                if (selectedProduk!!.stok == 0) {
+                                    Text(
+                                        text = "Tetap bisa dijual, update stok di Manajemen Stok",
+                                        fontSize = 10.sp,
+                                        color = Color(0xFFE65100),
+                                        fontFamily = plusjakarta
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
 
             item {
-                // SKU/Kode Barcode dengan tombol scan
+                // SKU/Kode Barcode dengan tombol scan (OPSIONAL)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -248,7 +257,7 @@ fun TambahKeranjangBottomSheet(
                         onValueChange = { skuBarcode = it },
                         placeholder = {
                             Text(
-                                "SKU/Kode Barcode",
+                                "SKU/Kode Barcode (Opsional)",
                                 color = Color.Gray,
                                 fontFamily = plusjakarta,
                                 fontSize = 14.sp
@@ -257,6 +266,9 @@ fun TambahKeranjangBottomSheet(
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.Black,
+                            cursorColor = Color.Black,
                             unfocusedBorderColor = Color(0xFFE0E0E0),
                             focusedBorderColor = Color(0xFFFDB913),
                             unfocusedContainerColor = Color(0xFFF5F5F5),
@@ -285,13 +297,21 @@ fun TambahKeranjangBottomSheet(
             }
 
             item {
-                // Stok
+                // Harga Jual
                 OutlinedTextField(
-                    value = stok,
-                    onValueChange = { stok = it },
+                    value = hargaJual,
+                    onValueChange = { hargaJual = it },
                     placeholder = {
                         Text(
-                            "Stok",
+                            "Harga Jual",
+                            color = Color.Gray,
+                            fontFamily = plusjakarta,
+                            fontSize = 14.sp
+                        )
+                    },
+                    leadingIcon = {
+                        Text(
+                            "Rp",
                             color = Color.Gray,
                             fontFamily = plusjakarta,
                             fontSize = 14.sp
@@ -303,144 +323,15 @@ fun TambahKeranjangBottomSheet(
                         .padding(bottom = 12.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black,
+                        cursorColor = Color.Black,
                         unfocusedBorderColor = Color(0xFFE0E0E0),
                         focusedBorderColor = Color(0xFFFDB913),
                         unfocusedContainerColor = Color(0xFFF5F5F5),
                         focusedContainerColor = Color(0xFFF5F5F5)
                     )
                 )
-            }
-
-            item {
-                // Kategori Dropdown
-                ExposedDropdownMenuBox(
-                    expanded = expandedKategori,
-                    onExpandedChange = { expandedKategori = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 12.dp)
-                ) {
-                    OutlinedTextField(
-                        value = kategori,
-                        onValueChange = {},
-                        readOnly = true,
-                        placeholder = {
-                            Text(
-                                "Kategori",
-                                color = Color.Gray,
-                                fontFamily = plusjakarta,
-                                fontSize = 14.sp
-                            )
-                        },
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedKategori)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(androidx.compose.material3.MenuAnchorType.PrimaryNotEditable),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = Color(0xFFE0E0E0),
-                            focusedBorderColor = Color(0xFFFDB913),
-                            unfocusedContainerColor = Color(0xFFF5F5F5),
-                            focusedContainerColor = Color(0xFFF5F5F5)
-                        )
-                    )
-                    ExposedDropdownMenu(
-                        expanded = expandedKategori,
-                        onDismissRequest = { expandedKategori = false }
-                    ) {
-                        if (kategoriList.isEmpty()) {
-                            DropdownMenuItem(
-                                text = { Text("Belum ada kategori") },
-                                onClick = { }
-                            )
-                        } else {
-                            kategoriList.forEach { kat ->
-                                DropdownMenuItem(
-                                    text = { Text(kat.namaKategori) },
-                                    onClick = {
-                                        kategori = kat.namaKategori
-                                        selectedKategoriId = kat.id
-                                        expandedKategori = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            item {
-                // Harga Beli dan Harga Jual
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Harga Beli
-                    OutlinedTextField(
-                        value = hargaBeli,
-                        onValueChange = { hargaBeli = it },
-                        placeholder = {
-                            Text(
-                                "Harga Beli",
-                                color = Color.Gray,
-                                fontFamily = plusjakarta,
-                                fontSize = 12.sp
-                            )
-                        },
-                        leadingIcon = {
-                            Text(
-                                "Rp",
-                                color = Color.Gray,
-                                fontFamily = plusjakarta,
-                                fontSize = 12.sp
-                            )
-                        },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = Color(0xFFE0E0E0),
-                            focusedBorderColor = Color(0xFFFDB913),
-                            unfocusedContainerColor = Color(0xFFF5F5F5),
-                            focusedContainerColor = Color(0xFFF5F5F5)
-                        )
-                    )
-
-                    // Harga Jual
-                    OutlinedTextField(
-                        value = hargaJual,
-                        onValueChange = { hargaJual = it },
-                        placeholder = {
-                            Text(
-                                "Harga Jual",
-                                color = Color.Gray,
-                                fontFamily = plusjakarta,
-                                fontSize = 12.sp
-                            )
-                        },
-                        leadingIcon = {
-                            Text(
-                                "Rp",
-                                color = Color.Gray,
-                                fontFamily = plusjakarta,
-                                fontSize = 12.sp
-                            )
-                        },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = Color(0xFFE0E0E0),
-                            focusedBorderColor = Color(0xFFFDB913),
-                            unfocusedContainerColor = Color(0xFFF5F5F5),
-                            focusedContainerColor = Color(0xFFF5F5F5)
-                        )
-                    )
-                }
             }
 
             item {
@@ -499,10 +390,17 @@ fun TambahKeranjangBottomSheet(
                         // Plus Button
                         IconButton(
                             onClick = {
-                                val stokInt = stok.toIntOrNull() ?: 0
-                                if (selectedProduk != null && stokInt > 0) {
-                                    if (jumlah < stokInt) jumlah++
+                                if (selectedProduk != null) {
+                                    // Jika produk ada
+                                    if (selectedProduk!!.stok > 0) {
+                                        // Produk punya stok, batasi sesuai stok
+                                        if (jumlah < selectedProduk!!.stok) jumlah++
+                                    } else {
+                                        // Stok = 0 (produk baru dari kasir), bebas tambah
+                                        jumlah++
+                                    }
                                 } else {
+                                    // Produk baru, bebas tambah jumlah
                                     jumlah++
                                 }
                             },
@@ -553,31 +451,29 @@ fun TambahKeranjangBottomSheet(
             // Simpan Button
             Button(
                 onClick = {
-                    // Validasi form
-                    val isFormValid = namaProduk.isNotEmpty() &&
-                        skuBarcode.isNotEmpty() &&
-                        stok.isNotEmpty() &&
-                        kategori.isNotEmpty() &&
-                        hargaBeli.isNotEmpty() &&
-                        hargaJual.isNotEmpty()
+                    // Validasi form: Hanya butuh Nama Produk dan Harga Jual
+                    val isFormValid = namaProduk.isNotEmpty() && hargaJual.isNotEmpty()
 
                     if (isFormValid) {
                         if (selectedProduk != null) {
-                            // Produk ada - update dengan data yang mungkin sudah diedit
+                            // Produk sudah ada - gunakan produk yang ada (custom harga jual jika diubah)
                             val produkCustom = selectedProduk!!.copy(
-                                hargaJual = hargaJual.toDoubleOrNull() ?: selectedProduk!!.hargaJual,
-                                hargaBeli = hargaBeli.toDoubleOrNull() ?: selectedProduk!!.hargaBeli
+                                hargaJual = hargaJual.toDoubleOrNull() ?: selectedProduk!!.hargaJual
                             )
                             onSave(produkCustom, jumlah)
                         } else {
-                            // Produk baru - tambah ke database dulu
+                            // Produk baru dari kasir - tambah ke database dengan:
+                            // - Stok = 0 (karena belum diinput dari Manajemen Stok)
+                            // - Harga Beli = 0 (karena hanya ada di Manajemen Stok)
+                            // - SKU = opsional (boleh kosong)
+                            // - Kategori ID = 1 (default/umum)
                             onAddProduk(
                                 namaProduk,
-                                skuBarcode,
-                                stok.toIntOrNull() ?: 0,
-                                selectedKategoriId,
-                                kategori,
-                                hargaBeli.toDoubleOrNull() ?: 0.0,
+                                skuBarcode.ifEmpty { "-" }, // SKU opsional
+                                0, // Stok = 0
+                                1, // Kategori ID default
+                                "Umum", // Kategori nama default
+                                0.0, // Harga Beli = 0
                                 hargaJual.toDoubleOrNull() ?: 0.0
                             )
 
@@ -585,11 +481,11 @@ fun TambahKeranjangBottomSheet(
                             val produkBaru = ProdukEntity(
                                 id = 0,
                                 namaProduk = namaProduk,
-                                sku = skuBarcode,
-                                stok = stok.toIntOrNull() ?: 0,
-                                kategoriId = selectedKategoriId,
-                                kategoriNama = kategori,
-                                hargaBeli = hargaBeli.toDoubleOrNull() ?: 0.0,
+                                sku = skuBarcode.ifEmpty { "-" },
+                                stok = 0,
+                                kategoriId = 1,
+                                kategoriNama = "Umum",
+                                hargaBeli = 0.0,
                                 hargaJual = hargaJual.toDoubleOrNull() ?: 0.0
                             )
                             onSave(produkBaru, jumlah)
@@ -603,12 +499,7 @@ fun TambahKeranjangBottomSheet(
                     containerColor = Color(0xFFFDB913)
                 ),
                 shape = RoundedCornerShape(12.dp),
-                enabled = namaProduk.isNotEmpty() &&
-                    skuBarcode.isNotEmpty() &&
-                    stok.isNotEmpty() &&
-                    kategori.isNotEmpty() &&
-                    hargaBeli.isNotEmpty() &&
-                    hargaJual.isNotEmpty()
+                enabled = namaProduk.isNotEmpty() && hargaJual.isNotEmpty()
             ) {
                 Text(
                     text = "Simpan",

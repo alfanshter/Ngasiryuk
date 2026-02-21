@@ -1057,6 +1057,9 @@ fun TambahStokDialog(
                         .padding(bottom = 16.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black,
+                        cursorColor = Color.Black,
                         unfocusedBorderColor = Color(0xFFE0E0E0),
                         focusedBorderColor = Color(0xFFFDB913),
                         unfocusedContainerColor = Color(0xFFF5F5F5),
@@ -1090,6 +1093,9 @@ fun TambahStokDialog(
                         .padding(bottom = 24.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black,
+                        cursorColor = Color.Black,
                         unfocusedBorderColor = Color(0xFFE0E0E0),
                         focusedBorderColor = Color(0xFFFDB913),
                         unfocusedContainerColor = Color(0xFFF5F5F5),

@@ -196,6 +196,9 @@ private fun RekapPenjualanContent(
                             .clickable { showDatePicker = true },
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.Black,
+                            cursorColor = Color.Black,
                             unfocusedBorderColor = Color.White,
                             focusedBorderColor = Color.White,
                             unfocusedContainerColor = Color.White,
